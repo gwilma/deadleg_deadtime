@@ -92,8 +92,11 @@ Non-dimensionalising shows three groups do most of the work:
   arrive at $(1+\sigma)L/u$. For 10 mm copper $\sigma\approx0.24$; for PE-X
   10 × 1.5 $\sigma\approx0.5$.
 * **Number of transfer units** $NTU = h_i\,2\pi r_i L/(\rho_w c_w Q)$: how
-  completely the water gives its heat to the wall in one pass. It is large (tens)
-  for these pipes, so the front is not delayed by lack of contact.
+  completely the water gives its heat to the wall in one pass. Over 5 m of these
+  pipes it is about 1 to 4. Above about 2 l/min it varies little with flow,
+  because $h_i$ rises almost in proportion to velocity. That is large enough that the wall takes most
+  of the heat from the leading water, and small enough that some lukewarm water
+  arrives at the plug-flow time ahead of the main rise.
 * **Wall Biot number** $Bi = h_i (r_o-r_i)/k_p$ and the wall Fourier number
   $k_p t/(\rho_p c_p (r_o-r_i)^2)$. For copper $Bi\sim0.02$: the wall is
   isothermal through its thickness and behaves as a lumped heat capacity, so the

@@ -15,7 +15,9 @@ and tracks four coupled heat flows:
   convection plus radiation), whose temperature rises as the pipe warms it.
 
 Everything starts at the same temperature as the air. The full derivation, the
-assumptions and the numerical method are in [docs/derivation.md](docs/derivation.md).
+assumptions and the numerical method are in [docs/derivation.md](docs/derivation.md), and a fuller
+explanation of the physics is in [docs/physics/physics.pdf](docs/physics/physics.pdf) (Tufte LaTeX;
+rebuild with `python docs/physics/make_figures.py` then `pdflatex physics.tex` twice in `docs/physics`).
 
 ## Quick start
 

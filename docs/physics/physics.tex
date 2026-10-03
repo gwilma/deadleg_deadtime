@@ -1,0 +1,431 @@
+\documentclass[a4paper,justified]{tufte-handout}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,decorations.pathmorphing,patterns}
+\usepackage{xcolor}
+\definecolor{accent}{HTML}{A6192E}
+\definecolor{ink}{HTML}{222222}
+\definecolor{hot}{HTML}{C8102E}
+\definecolor{cold}{HTML}{2B5A87}
+\graphicspath{{figures/}}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\degC}{\,\textdegree{}C}
+\newcommand{\lpm}{\,l/min}
+
+\title{Hot water into a cold pipe}
+\author{The physics of dead-leg warm-up, and how the deadleg model represents it}
+\date{3 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent When a hot tap is opened at the end of a pipe that has gone cold, the
+first water out is the cold water that was standing in the pipe. That much is
+simple displacement. But the hot water that follows has to heat the pipe wall
+as it goes, and it loses a little heat to the air. So the tap runs warm later,
+and more water is wasted, than displacement alone suggests. This note sets out
+the physics of that transient: the governing equations, the few
+dimensionless numbers that control it, the analytical limits, and why copper and
+plastic pipes behave so differently. The model built on it predicts the delivery
+times of 46 field tests to within a few seconds, with no fitted constants.
+\end{abstract}
+
+\section{The question}
+
+A pipe of length $L$ and bore radius $r_i$ holds a volume $V=\pi r_i^2L$ of
+water. If hot water simply pushed the cold water out, like a piston, the hot
+water would reach the tap after the \emph{plug-flow time}
+\begin{equation}
+  t_{\text{plug}} = \frac{V}{Q} = \frac{L}{u},
+  \qquad u = \frac{Q}{\pi r_i^2},
+  \label{eq:plug}
+\end{equation}
+where $Q$ is the volume flow and $u$ the mean velocity.\sidenote{For 5\,m of
+10\,mm copper (bore 8.8\,mm), $V=0.30$\,l and $t_{\text{plug}}=6$\,s at
+3\lpm{}. At 1\lpm{} it is 18\,s.} Everything else in this note explains why the
+real delivery time is longer than this, and by how much.
+
+The setting is a domestic hot water branch: flows of 1 to 6\lpm{} in pipes of
+roughly 10 to 12\,mm outside diameter, made of copper or plastic (PE-X). At the
+start, the water in the pipe, the pipe wall and the surrounding air are all at
+the same temperature $T_0$, typically about 20\degC{}. At $t=0$ the tap opens and
+water arrives at the inlet at $T_{in}$, for example 55\degC{}.
+
+\section{Four bodies, three exchanges}
+
+\begin{marginfigure}
+\centering
+\begin{tikzpicture}[scale=0.95, every node/.style={font=\footnotesize}]
+  \fill[gray!8] (-2.1,-2.1) rectangle (2.1,2.1);
+  \node[gray!60!black, anchor=north west] at (-2.05,2.05) {air, $T_a$};
+  \fill[gray!45] (0,0) circle (1.15);
+  \fill[cold!25] (0,0) circle (0.8);
+  \draw[ink, line width=0.4pt] (0,0) circle (1.15) (0,0) circle (0.8);
+  \node at (0,-0.25) {water};
+  \node at (0,-0.5) {$T_w$};
+  % radii from the centre
+  \fill[ink] (0,0) circle (0.7pt);
+  \draw[-{Stealth[length=1.4mm]}, line width=0.4pt] (0,0) -- (45:0.8) node[pos=0.55, above left=-1pt] {$r_i$};
+  \draw[-{Stealth[length=1.4mm]}, line width=0.4pt] (0,0) -- (-20:1.15) node[pos=0.5, above=-1pt] {$r_o$};
+  % wall label with leader
+  \draw[ink, line width=0.3pt] (-60:1.0) -- (-1.2,-1.75) node[left=-1pt] {wall, $T_p(r)$};
+  % heat flow, water -> wall -> air
+  \draw[accent, -{Stealth[length=1.6mm]}, line width=0.7pt] (150:0.45) -- (150:0.95);
+  \node[accent] at (150:0.25) {$h_i$};
+  \draw[accent, -{Stealth[length=1.6mm]}, line width=0.7pt] (150:1.15) -- (150:1.75);
+  \node[accent] at (165:1.75) {$h_o$};
+\end{tikzpicture}
+\caption{Cross-section. Heat passes from the water to the wall
+(film coefficient $h_i$), conducts through the wall, and leaves its outer
+surface for the air ($h_o$).}
+\label{fig:section}
+\end{marginfigure}
+
+The model follows four bodies (Figure~\ref{fig:section}):
+\begin{enumerate}
+  \item \textbf{the water}, flowing along the pipe as a plug, with a bulk
+    temperature $T_w(x,t)$ that varies along the pipe;
+  \item \textbf{the pipe wall}, homogeneous and axially symmetric, with a
+    temperature $T_p(r,x,t)$ that varies through the thickness and along the length;
+  \item \textbf{the air}, a single well-mixed body at $T_a(t)$ that warms as the
+    pipe gives it heat;
+  \item optionally, \textbf{an environment} at a fixed temperature, to which the
+    air body can lose heat.
+\end{enumerate}
+They exchange heat in a chain: water to wall by forced convection, through the
+wall by conduction, and wall to air by natural convection and radiation.
+
+\section{Governing equations}
+
+\paragraph{Water.} An energy balance on a thin slice of water $\dd x$, carried
+along with the flow, gives
+\begin{equation}
+  \rho_w c_w A_i\left(\frac{\partial T_w}{\partial t}+u\frac{\partial T_w}{\partial x}\right)
+  = h_i\, 2\pi r_i\,\bigl(T_p(r_i)-T_w\bigr),
+  \label{eq:water}
+\end{equation}
+with $A_i=\pi r_i^2$, the inlet condition $T_w(0,t)=T_{in}(t)$ and the initial
+condition $T_w(x,0)=T_0$. The left side is the rate of change of the heat held
+by the slice, seen by an observer moving with the water. The right side is the
+heat it gives to the wall.\sidenote{Axial conduction in the water is neglected.
+The Péclet number $uL/\alpha_w$ is about $10^7$, so heat is carried along the
+pipe by the flow and hardly at all by conduction.}
+
+\paragraph{Wall.} Transient conduction in an axially symmetric annulus,
+\begin{equation}
+  \rho_p c_p \frac{\partial T_p}{\partial t}
+  = \frac{1}{r}\frac{\partial}{\partial r}\!\left(k_p r \frac{\partial T_p}{\partial r}\right)
+  + k_p\frac{\partial^2 T_p}{\partial x^2},
+  \qquad r_i<r<r_o ,
+  \label{eq:wall}
+\end{equation}
+with convective conditions on both faces,
+\begin{align}
+  -k_p\frac{\partial T_p}{\partial r}\Big|_{r_i} &= h_i\bigl(T_w-T_p(r_i)\bigr), \\
+  -k_p\frac{\partial T_p}{\partial r}\Big|_{r_o} &= h_o\bigl(T_p(r_o)-T_a\bigr).
+\end{align}
+The wall starts at $T_0$, and its ends are taken as insulated.
+
+\paragraph{Air.} The air body has a single temperature, so its balance is an
+ordinary differential equation:
+\begin{equation}
+  \rho_a c_a V_a \frac{\dd T_a}{\dd t}
+  = \int_0^L h_o\,2\pi r_o\bigl(T_p(r_o)-T_a\bigr)\,\dd x \;-\; UA_{env}\bigl(T_a-T_{env}\bigr).
+  \label{eq:air}
+\end{equation}
+Letting $V_a\to\infty$ holds the air at $T_0$, which represents a large room.
+
+\paragraph{Conservation.} Adding the three equations and integrating over time
+gives the energy budget the numerical solution must respect:
+\begin{multline}
+  \int_0^t \rho_w c_w Q\,(T_{in}-T_{out})\,\dd t'
+  = \Delta E_{\text{water}}+\Delta E_{\text{wall}}+\Delta E_{\text{air}} \\
+  + \int_0^t UA_{env}(T_a-T_{env})\,\dd t' .
+\end{multline}
+In words, the heat that entered and did not leave at the tap is now in the
+water, the wall or the air, or has gone to the environment.
+
+\section{What controls the delay}
+
+Scaling equations \eqref{eq:water}--\eqref{eq:air} shows that three groups do
+almost all the work.
+
+\paragraph{The heat capacity ratio.}
+\begin{equation}
+  \sigma = \frac{\rho_p c_p A_p}{\rho_w c_w A_i}
+\end{equation}
+is the heat the wall can absorb per metre for each degree it warms, relative to
+the water's. Suppose the wall took up heat instantly, with no losses. Each
+metre of pipe would then have to absorb $(1+\sigma)$ times the heat the water
+alone holds before it could pass hot water on. The hot front would therefore
+move at a speed of $u/(1+\sigma)$ and arrive at
+\begin{equation}
+  t_{\text{front}} = (1+\sigma)\,t_{\text{plug}} .
+  \label{eq:front}
+\end{equation}
+This is the most useful single result in this note. Copper's thin wall gives
+$\sigma\approx0.2$; plastic's thick wall gives $\sigma\approx0.5$ to 0.6
+(Table~\ref{tab:groups}).\sidenote{Per unit volume, copper and PE-X store
+heat in a ratio of only about 1.7 to~1. The difference in $\sigma$ comes from
+the walls: a plastic wall is two to three times as thick.}
+
+\paragraph{The number of transfer units.}
+\begin{equation}
+  NTU = \frac{h_i\,2\pi r_i L}{\rho_w c_w Q}
+\end{equation}
+measures how completely the water hands its heat to the wall in one pass. If it
+were very large, the water and the inner surface of the wall would sit at the same
+temperature everywhere. Over 5\,m of these pipes it is between about 1 and 4.
+That is large enough for the wall to take most of the heat from the leading
+water, and small enough that some lukewarm water arrives at the plug-flow time,
+ahead of the main rise. Above about 2\lpm{}, $NTU$ hardly changes with flow,
+because $h_i$ rises almost in proportion to the velocity.
+
+\paragraph{The wall Biot number and diffusion time.}
+\begin{equation}
+  Bi = \frac{h_i\,\delta}{k_p},\qquad t_{\text{wall}}=\frac{\delta^2}{\alpha_p},
+  \qquad \delta = r_o-r_i,\ \alpha_p=\frac{k_p}{\rho_p c_p}
+\end{equation}
+compare the resistance of the wall to the resistance of the water film, and give the time
+heat takes to soak through the wall. This is where copper and plastic part
+company:
+\begin{itemize}
+  \item copper: $Bi\sim0.01$, $t_{\text{wall}}\approx4$\,ms. The wall is isothermal
+    through its thickness from the instant the water touches it, so it behaves as
+    a simple lumped heat store;
+  \item PE-X: $Bi\sim10$ to 60, $t_{\text{wall}}\approx12$ to 20\,s. The wall is
+    a poor conductor; while the hot water passes, only a thin inner skin warms.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & bore & $\sigma$ & $t_{\text{wall}}$ & \multicolumn{3}{c}{$NTU$ / $Bi$ at} \\
+ \cmidrule(l){5-7}
+ & mm & & s & 1\lpm{} & 3\lpm{} & 6\lpm{} \\
+\midrule
+Copper 10$\times$0.6 & 8.8 & 0.24 & 0.004 & 2.1 / 0.002 & 3.4 / 0.009 & 3.2 / 0.02 \\
+Copper 12$\times$0.6 & 10.8 & 0.19 & 0.004 & 1.3 / 0.001 & 2.8 / 0.006 & 2.7 / 0.01 \\
+PE-X 10$\times$1.5 & 7.0 & 0.50 & 11.7 & 3.2 / 8 & 4.2 / 31 & 3.9 / 57 \\
+PE-X 12$\times$2.0 & 8.0 & 0.59 & 20.8 & 2.5 / 7 & 3.7 / 33 & 3.4 / 60 \\
+\bottomrule
+\end{tabular}
+\caption{The controlling groups for a 5\,m run, with water properties at
+40\degC{}. $NTU$ is quoted for the whole 5\,m. Copper wall:
+$k=340$\,W/m\,K, $\rho c=3.4$\,MJ/m$^3$K. PE-X: $k=0.38$\,W/m\,K,
+$\rho c=2.0$\,MJ/m$^3$K.}
+\label{tab:groups}
+\end{table}
+
+\begin{figure}
+\includegraphics[width=\linewidth]{radial_profiles.pdf}
+\caption{Temperature through the wall, half-way along a 5\,m run at 3\lpm{}, at
+1, 3, 10 and 30\,s after the hot front passes. The dots at the left are the
+water. Copper is uniform through its thickness and catches up with the water in
+a few seconds. In PE-X a steep gradient persists: after 10\,s the outer half of
+the wall is still close to its starting temperature.}
+\label{fig:radial}
+\end{figure}
+
+Figure~\ref{fig:radial} shows the consequence. Copper soaks up its share of heat
+at once, so the outlet stays cool until the delayed front of
+equation~\eqref{eq:front} arrives, then rises steeply. PE-X takes only a skin of
+heat at first. Its effective $\sigma$ is small early on and grows as heat
+penetrates the wall. So the first warm water arrives close to the plug-flow
+time, but the last few degrees wait for the wall to soak through.
+
+\section{Heat transfer coefficients}
+
+\paragraph{Inside.} The film coefficient comes from the Reynolds number
+$Re=uD_i/\nu$. Above $Re=10^4$ the model uses Gnielinski's correlation,
+\begin{equation}
+  Nu = \frac{(f/8)(Re-1000)Pr}{1+12.7\sqrt{f/8}\,(Pr^{2/3}-1)},
+  \qquad f=(0.790\ln Re-1.64)^{-2},
+\end{equation}
+and below $Re=2300$ the fully developed laminar value $Nu=3.66$. Between the two
+it interpolates linearly in $Re$, as the VDI Heat Atlas
+recommends.\sidenote{At 1--6\lpm{} in 7--11\,mm bores, $Re$ is about
+3000--28000, so the flow is transitional at the lowest flows and turbulent
+otherwise. Viscosity halves between 20 and 55\degC{}, so the arriving hot water
+is more turbulent than the cold water it displaces. The model evaluates
+properties at the local water temperature.} This gives $h_i$ of about
+$10^3$ to $1.5\times10^4$\,W/m$^2$K.
+
+\paragraph{Outside.} Natural convection from a horizontal cylinder (Churchill
+and Chu) plus radiation to surroundings at the air temperature,
+$h_{rad}=\varepsilon\sigma_{SB}(T_s^2+T_a^2)(T_s+T_a)$. For a 50\degC{} pipe
+in 20\degC{} air, this gives $h_o\approx9$\,W/m$^2$K for tarnished copper
+($\varepsilon=0.1$) and $\approx14$\,W/m$^2$K for plastic ($\varepsilon=0.9$).
+
+The outside coefficient is a thousand times smaller than the inside one. While
+the tap is running, the pipe loses only a few watts per metre to the air. Over a
+draw of a minute or two, almost all of the heat leaving the water goes into the
+wall. External losses set the steady outlet temperature and how quickly the
+pipe cools between draws, but they barely change the delivery time. The model
+confirms this. Enclosing the pipe in a 1.5\,m$\times$0.3\,m air body instead of
+an infinite room changes no field-trial prediction by more than 0.34\,s, even
+though the air warms by up to 7\,K.
+
+\section{Exact solutions in limiting cases}
+
+Three limits have closed-form solutions. Each one checks the model and sharpens
+intuition.
+
+\paragraph{No wall heat capacity.} The outlet steps from $T_0$ to $T_{in}$ at
+$t_{\text{plug}}$, equation~\eqref{eq:plug}.
+
+\paragraph{A thin, perfectly conducting wall with no losses.} This is the
+Anzelius--Schumann problem from regenerator theory. In terms of
+\[
+  \xi = \frac{h_i P x}{\rho_w c_w Q},\qquad
+  \eta = \frac{h_i P\,(t-x/u)}{\rho_p c_p A_p},\qquad P=2\pi r_i,
+\]
+the dimensionless water temperature $\theta=(T_w-T_0)/(T_{in}-T_0)$ is, for
+$\eta\ge0$,
+\begin{equation}
+  \theta = e^{-\xi}\Bigl[e^{-\eta}I_0\bigl(2\sqrt{\xi\eta}\bigr)
+           +\int_0^\eta e^{-s}I_0\bigl(2\sqrt{\xi s}\bigr)\,\dd s\Bigr],
+\end{equation}
+and zero before the plug front arrives. At $x=L$, $\xi$ is the $NTU$. The factor
+$e^{-\xi}$ is the step of lukewarm water that arrives at the plug-flow time; the
+rest of the rise is spread around $t_{\text{front}}$ of
+equation~\eqref{eq:front}.
+
+\begin{marginfigure}
+\includegraphics[width=\linewidth]{schumann.pdf}
+\caption{The numerical model (grey and black) against the exact
+Anzelius--Schumann solution (red), copper-like wall, 5\,m at 3\lpm{}. Even at
+25 cells the curves are almost indistinguishable.}
+\label{fig:schumann}
+\end{marginfigure}
+
+\paragraph{Steady state with losses.} Once the wall has warmed, the outlet
+settles at
+\begin{gather}
+  T_{out} = T_a + (T_{in}-T_a)\exp\!\left(-\frac{U'L}{\rho_w c_w Q}\right),\\
+  \frac{1}{U'} = \frac{1}{2\pi r_i h_i}+\frac{\ln(r_o/r_i)}{2\pi k_p}+\frac{1}{2\pi r_o h_o}.
+\end{gather}
+Because $h_o$ is small, the drop is a fraction of a degree over 5\,m.
+
+\section{How the equations are solved}
+
+The pipe is divided into $N_x$ cells along its length (200 by default). Each
+cell has one water node and $N_r$ concentric wall shells, and there is a single
+air node. Each time step does three things:
+\begin{enumerate}
+  \item \textbf{Radial heat exchange} between the water, the wall shells and the
+    air, solved implicitly. Each cell's water-and-wall system is tridiagonal, and
+    its solution is linear in the new air temperature. That lets the air node,
+    which couples every cell, be eliminated exactly, so no iteration is needed;
+  \item \textbf{Axial conduction} along the wall, also implicit;
+  \item \textbf{Advection}: the time step is chosen as $\Delta t=\Delta x/u$, so
+    the water moves exactly one cell per step. Transport is exact, and the front
+    is not artificially smeared.
+\end{enumerate}
+The scheme conserves energy to rounding error. It converges to the
+Anzelius--Schumann solution at first order: within 0.7\,\% at 200 cells and
+0.2\,\% at 800 (Figure~\ref{fig:schumann}).
+
+\section{What the model predicts}
+
+\begin{figure}
+\includegraphics[width=\linewidth]{outlet_traces.pdf}
+\caption{Outlet temperature after the tap opens: 5\,m run, 3\lpm{}, inlet
+55\degC{}, pipe and air initially 20\degC{}.}
+\label{fig:traces}
+\end{figure}
+
+Figure~\ref{fig:traces} shows both behaviours. Each copper trace is flat until
+$t_{\text{plug}}$, has a small step of lukewarm water, then rises steadily to
+about $(1+\sigma)t_{\text{plug}}$ and beyond. The PE-X traces jump almost to
+40\degC{} at the plug-flow time, then creep towards the inlet temperature as
+heat soaks into the wall.
+
+Three practical consequences follow.
+\begin{itemize}
+  \item \textbf{For copper, waste is fixed in volume.} About 1.4 to 1.5 pipe
+    volumes run off before the tap reaches 50\degC{}, whatever the flow. The
+    time therefore scales as $1/Q$.
+  \item \textbf{For plastic, the answer depends on what ``hot'' means.} The time
+    to 50\degC{} can be twice the time to 40\degC{}. At 1\lpm{}, a PE-X pipe is as
+    slow to 50\degC{} as copper of the same outside diameter, despite holding
+    less water. At 6\lpm{}, it is faster.
+  \item \textbf{A delivery time is meaningful only with its threshold and supply
+    temperature.} A 45\degC{} target with 50\degC{} supply sits in the slow
+    tail for plastic pipe.
+\end{itemize}
+
+\section{Checking against a field trial}
+
+\begin{marginfigure}
+\includegraphics[width=\linewidth]{parity.pdf}
+\caption{Model against measured time to 45\degC{} for all 46 field tests. The
+diagonal is perfect agreement. Each dot sits half-way through its 5\,s reading
+window.}
+\label{fig:parity}
+\end{marginfigure}
+
+Ridge and Jones (FairHeat, 2022) measured the time to 45\degC{} at the end of
+5, 15 and 25\,m runs of multilayer pipe at 4, 6 and 9\lpm{}, supplied by a heat
+interface unit, with the pipe starting at about 19\degC{}. The model was run for
+every test with no adjustment. The inlet stepped to 50\degC{} at the time the
+unit itself took to deliver hot water. The multilayer wall was represented as
+one homogenised material, and the air body was enclosed and
+1.5\,m$\times$0.3\,m in section.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{model} & \multicolumn{2}{c}{paper's regression} \\
+ \cmidrule(lr){2-3}\cmidrule(l){4-5}
+ & bias & RMS & bias & RMS \\
+\midrule
+Manufacturer A (23 tests) & $-0.1$\,s & 3.3\,s & $+3.1$\,s & 4.3\,s \\
+Manufacturer B, hold-out (23) & $+1.1$\,s & 7.0\,s & $+6.2$\,s & 8.9\,s \\
+\bottomrule
+\end{tabular}
+\caption{Errors against the middle of each 5\,s reading window. The paper's
+regression was fitted to Manufacturer A.}
+\label{tab:errors}
+\end{table}
+
+The physical model does better than the paper's regression on both sets,
+including the set the regression was fitted to (Table~\ref{tab:errors},
+Figure~\ref{fig:parity}). Its largest misses are the slow, long, large-bore runs
+at 4\lpm{}, where it predicts hot water 10 to 28\,s early. The likeliest
+explanation, not yet tested, is that the heat unit supplied water a little below
+50\degC{} at that flow. Because 45\degC{} is close to the supply temperature,
+a degree matters a great deal there.
+
+\section{Limitations}
+
+\begin{itemize}
+  \item \textbf{Plug flow.} Below $Re\approx2300$ the parabolic velocity profile
+    brings the first warm water out at about half the plug-flow time and smears
+    the front. That matters only near or below 1\lpm{} with cold water.
+  \item \textbf{Steady correlations.} A steady-state $h_i$ is applied to a strongly
+    transient wall. The entrance region and the moving thermal front both raise
+    the true coefficient slightly.
+  \item \textbf{A homogeneous wall.} Multilayer pipe is represented by
+    volume-averaged properties.
+  \item \textbf{What is left out.} Fittings, clips, insulation and the thermal mass
+    of the surrounding structure are not modelled. Radiation is taken to go to
+    surroundings at the air temperature.
+\end{itemize}
+
+\vspace{1em}
+\noindent{\footnotesize\raggedright The code, tests and data behind this note are in the
+GitHub repository \mbox{gwilma/deadleg\_deadtime}. The file
+\mbox{docs/derivation.md} gives the same derivation in brief, and
+\mbox{docs/physics/make\_figures.py} redraws every figure.\par}
+
+\end{document}
