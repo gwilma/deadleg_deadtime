@@ -25,6 +25,8 @@ python -m pytest                       # verification tests (about 15 s)
 python -m deadleg run scenarios/copper_10mm_3lpm.json
 python examples/sweep.py               # copper and PE-X, 1-6 l/min -> results/sweep
 python examples/ref29_validation.py /path/to/ref29   # field trial comparison -> results/ref29
+python examples/ref29_validation.py /path/to/ref29 --air-area 0.45 --out results/ref29_air_1.5x0.3m
+(cd examples && python ref29_plots.py ../results/ref29_air_1.5x0.3m --air-area 0.45 --data /path/to/ref29 --fonts /path/to/SourceSansPro)
 ```
 
 From Python:
@@ -93,7 +95,7 @@ Ridge & Jones (FairHeat, 2022) measured the time to 45 °C at the end of
 `examples/ref29_validation.py` runs all 46 tests with no fitting: inlet steps from
 19 °C to 50 °C (the steady outlet temperature in the paper's traces) at the
 measured HIU-plus-manifold time H; MLCP is a homogenised material
-(`deadleg.properties.MLCP`); air fixed at 20 °C.
+(`deadleg.properties.MLCP`); air fixed at 19 °C.
 
 | | Model bias (s) | Model RMSE (s) | Paper's regression bias (s) | Paper's regression RMSE (s) |
 |---|---|---|---|---|
@@ -104,6 +106,22 @@ Errors are against the middle of each 5 s reading window (the probe was read eve
 5 s, so the true crossing lies up to 5 s before the reported time).
 
 ![Model vs Ref 29](results/ref29/ref29_comparison.png)
+
+### With an enclosed air body of 1.5 m × 0.3 m
+
+Rerunning the 46 tests with the pipe in an enclosed 1.5 m × 0.3 m air body
+(0.45 m² cross-section along the run, starting at 19 °C,
+`--air-area 0.45`) leaves the errors almost unchanged: Manufacturer A has bias
+−0.1 s and RMSE 3.3 s; Manufacturer B has bias +1.1 s and RMSE 7.0 s. No
+delivery time moves by more than 0.34 s, and the air warms by at most 7 K
+(to 26 °C) in the longest test. During a draw lasting one or two minutes,
+almost all of the heat goes into the wall and the water. The outer surface
+loses only a few watts per metre, so the air body has little effect.
+Charts (Altair, `examples/ref29_plots.py`):
+
+![Delivery time by test](results/ref29_air_1.5x0.3m/ref29_by_test.png)
+![Predicted vs measured](results/ref29_air_1.5x0.3m/ref29_parity.png)
+![Outlet traces](results/ref29_air_1.5x0.3m/ref29_traces.png)
 
 The model reproduces the shape of the 25 m trace closely (RMSE 0.5 °C) and the
 5 m trace to within the uncertainty of the inlet. Its largest misses are the

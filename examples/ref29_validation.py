@@ -11,7 +11,9 @@ Model inputs (assumptions, since the paper does not report them):
 * pipe inlet = 19 degC until H, then a step to T_supply (default 50 degC, the
   steady outlet seen in Figs 3 and 4);
 * pipe wall = homogenised MLCP (deadleg.properties.MLCP), Table 1 dimensions;
-* air held at 20 degC (routing and ambient were not reported).
+* air held at 19 degC (routing and ambient were not reported), or with
+  ``--air-area`` an enclosed air body of that cross-section (m2) along the
+  pipe, starting at 19 degC with the pipe.
 """
 
 from __future__ import annotations
@@ -34,23 +36,24 @@ PAPER_SLOPE = 1.262  # s per (kg / (l/s)), fitted on Manufacturer A
 PAPER_DENSITY = 1015.0  # kg/m3 implied by the paper's Fig 5
 
 
-def scenario_for(od_mm, wall_mm, length, flow_lpm, H, T_supply, duration, **kw):
+def scenario_for(od_mm, wall_mm, length, flow_lpm, H, T_supply, duration, air_area=math.inf, **kw):
     pipe = Pipe(od_mm / 1e3, wall_mm / 1e3, kw.pop("material", MLCP))
+    air_volume = math.inf if math.isinf(air_area) else air_area * length
     inlet = ([0.0, H - 1e-3, H + 1e-3, 1e5], [T0, T0, T_supply, T_supply])
     return Scenario(
         pipe, length, flow_lpm, duration=duration, T_initial=T0, T_inlet=inlet,
-        air_volume=math.inf, T_environment=20.0, n_axial=kw.pop("n_axial", 250), **kw,
+        air_volume=air_volume, n_axial=kw.pop("n_axial", 250), **kw,
     )
 
 
-def run(data_dir: Path, out_dir: Path, T_supply: float):
+def run(data_dir: Path, out_dir: Path, T_supply: float, air_area: float = math.inf):
     rows = list(csv.DictReader(open(data_dir / "delivery_time_tests.csv")))
     tested = [r for r in rows if r["result_vs_45s"] != "not tested"]
     out_rows = []
     for r in tested:
         od, wall, length = float(r["OD_mm"]), float(r["wall_mm_table1"]), float(r["length_m"])
         flow, H = float(r["flow_l_per_min"]), float(r["H_s_table2"])
-        sc = scenario_for(od, wall, length, flow, H, T_supply, duration=1.0)
+        sc = scenario_for(od, wall, length, flow, H, T_supply, duration=1.0, air_area=air_area)
         C = sc.plug_flow_time()
         sc.duration = H + 3 * C + 90
         res = simulate(sc)
@@ -65,6 +68,7 @@ def run(data_dir: Path, out_dir: Path, T_supply: float):
             "model_s": round(t_model, 2), "model_reading_s": reading,
             "model_warmup_T_s": round(t_model - H - C, 2),
             "paper_formula_s": round(t_paper, 2),
+            "air_C_at_end": round(float(res.T_air[-1]), 2),
         })
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -91,7 +95,7 @@ def run(data_dir: Path, out_dir: Path, T_supply: float):
         ("fig4_25m", "fig4_trace_mfrB_14p2mm_6lpm_25m.csv", "time_s_shifted_minus5_recommended", "outlet_temp_C_approx", 25.0),
     ):
         t, T = load_trace(data_dir / fname, tcol, Tcol)
-        sc = scenario_for(20.0, 2.8, length, 6.0, 5.7, T_supply, duration=float(t.max()) + 5)
+        sc = scenario_for(20.0, 2.8, length, 6.0, 5.7, T_supply, duration=float(t.max()) + 5, air_area=air_area)
         res = simulate(sc)
         traces[name] = {"t_meas": t, "T_meas": T, "t_model": res.t, "T_model": res.T_out}
         stats[name] = compare(res, t, T, (T_TARGET,), READ_INTERVAL)
@@ -100,7 +104,7 @@ def run(data_dir: Path, out_dir: Path, T_supply: float):
     return out_rows, stats, traces
 
 
-def plot(rows, traces, out_dir: Path, T_supply: float):
+def plot(rows, traces, out_dir: Path, T_supply: float, air_label: str = "air fixed at 19 °C"):
     import matplotlib
 
     matplotlib.use("Agg")
@@ -133,9 +137,36 @@ def plot(rows, traces, out_dir: Path, T_supply: float):
         ax.set_ylabel("outlet temperature (°C)")
         ax.set_title(title)
         ax.legend(frameon=False, loc="lower right")
-    fig.suptitle(f"Model vs Ref 29 field trial (no fitting; supply {T_supply:g} °C from time H, MLCP homogenised)")
+    fig.suptitle(f"Model vs Ref 29 field trial (no fitting; supply {T_supply:g} °C from time H; {air_label})")
     fig.tight_layout()
     fig.savefig(out_dir / "ref29_comparison.png", dpi=150)
+    plt.close(fig)
+
+    # Every test: delivery time against run length, one panel per pipe.
+    flow_colors = {4.0: "#2a78d6", 6.0: "#eb6834", 9.0: "#1baf7a"}
+    pipes = sorted({(r["manufacturer"], r["OD_mm"]) for r in rows})
+    fig, axes = plt.subplots(2, 3, figsize=(14, 8), sharey=True)
+    for ax, (mfr, od) in zip(axes.flat, pipes):
+        sub = [r for r in rows if r["manufacturer"] == mfr and r["OD_mm"] == od]
+        for q, col in flow_colors.items():
+            pts = sorted((r for r in sub if r["flow_l_per_min"] == q), key=lambda r: r["length_m"])
+            if not pts:
+                continue
+            L = [r["length_m"] for r in pts]
+            ax.plot(L, [r["model_s"] for r in pts], color=col, lw=2, label=f"{q:g} l/min model")
+            ax.plot(L, [r["measured_s"] for r in pts], "o", color=col, ms=7, mec="white", mew=1.5,
+                    label=f"{q:g} l/min measured")
+        ax.axhline(45, color="#9a9a94", lw=1, ls="--")
+        ax.set_title(f"Mfr {mfr}, {od:g} mm OD" + (" (hold-out)" if mfr == "B" else ""))
+        ax.set_xlabel("run length (m)")
+        ax.set_xticks([5, 15, 25])
+    for ax in axes[:, 0]:
+        ax.set_ylabel("time to 45 °C at outlet (s)")
+    axes[0, 0].legend(frameon=False, fontsize=8, loc="upper left")
+    fig.suptitle(f"Delivery time to 45 °C: model (lines) vs field trial (dots); {air_label}\n"
+                 "Measured times are 5 s probe readings; dashed line is the 45 s target")
+    fig.tight_layout()
+    fig.savefig(out_dir / "ref29_by_test.png", dpi=150)
     plt.close(fig)
 
 
@@ -144,10 +175,13 @@ if __name__ == "__main__":
     ap.add_argument("data_dir", nargs="?", default="/mnt/project-files/ref29")
     ap.add_argument("--out", default="results/ref29")
     ap.add_argument("--supply", type=float, default=50.0)
+    ap.add_argument("--air-area", type=float, default=math.inf,
+                    help="cross-section of an enclosed air body along the pipe, m2 (default: air fixed at 19 degC)")
     a = ap.parse_args()
-    rows, stats, traces = run(Path(a.data_dir), Path(a.out), a.supply)
+    rows, stats, traces = run(Path(a.data_dir), Path(a.out), a.supply, a.air_area)
     print(json.dumps(stats, indent=2))
     try:
-        plot(rows, traces, Path(a.out), a.supply)
+        air_label = "air fixed at 19 °C" if math.isinf(a.air_area) else f"enclosed air body {a.air_area:g} m² per m of pipe"
+        plot(rows, traces, Path(a.out), a.supply, air_label)
     except ImportError:
         print("matplotlib not installed; skipped figures")
