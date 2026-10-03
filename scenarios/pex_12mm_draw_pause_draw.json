@@ -1,0 +1,9 @@
+{
+  "pipe": {"preset": "pex_12x2.0"},
+  "length_m": 8,
+  "flow_schedule": [[45, 2.0], [600, 0], [45, 2.0]],
+  "T_initial_C": 20,
+  "T_inlet_C": 55,
+  "air_volume_m3": 0.08,
+  "air_loss_UA_W_per_K": 1.0
+}

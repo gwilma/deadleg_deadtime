@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deadleg"
+version = "0.1.0"
+description = "Transient model of hot water flowing into a cold domestic hot water pipe"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy"]
+
+[project.optional-dependencies]
+plots = ["matplotlib"]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["deadleg"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

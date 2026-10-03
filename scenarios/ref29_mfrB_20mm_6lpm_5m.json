@@ -1,0 +1,9 @@
+{
+  "pipe": {"outer_diameter_mm": 20, "wall_mm": 2.8, "material": "mlcp", "name": "Ref 29 Mfr B 20 mm MLCP"},
+  "length_m": 5,
+  "flow_l_per_min": 6,
+  "duration_s": 90,
+  "T_initial_C": 19,
+  "T_inlet_C": {"times_s": [0, 5.69, 5.71, 600], "temps_C": [19, 19, 50, 50]},
+  "air_volume_m3": "fixed"
+}
