@@ -1,0 +1,8 @@
+{
+  "pipe": {"preset": "copper_10x0.6"},
+  "length_m": 5,
+  "flow_l_per_min": 3,
+  "duration_s": 60,
+  "T_initial_C": 20,
+  "T_inlet_C": 55
+}
