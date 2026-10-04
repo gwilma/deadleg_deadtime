@@ -102,3 +102,9 @@ def test_bad_inputs():
         Inputs(PRESETS["pex_12x2.0"], 0, 6)
     with pytest.raises(ValueError):
         simulate_moc(PRESETS["pex_10x1.5"], 50, 12 / 60000, 1e5, T, 0.1)  # friction > supply pressure
+
+
+def test_arrester_volume_reported_in_ml():
+    r = assess_simple("copper_10x0.6", 8, 6, "solenoid")
+    assert 1 < r.arrester_precharge_volume_ml < 50
+    assert f"{r.arrester_precharge_volume_ml:.0f} ml" in r.recommendations[0]

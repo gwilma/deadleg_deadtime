@@ -299,7 +299,7 @@ def assess(inp: Inputs) -> Assessment:
     inputs["pipe"] = inp.pipe.describe()
     return Assessment(inputs, v, a, t_crit, regime, dp_jk / 1e5, dp_cf / 1e5,
                       None if moc_surge is None else moc_surge / 1e5, dp_design / 1e5, peak / 1e5,
-                      min_gauge / 1e5, checks, required, t_need, q_allow, vol, recs)
+                      min_gauge / 1e5, checks, required, t_need, q_allow, None if vol is None else vol * 1e6, recs)
 
 
 def _closure_time_for_limit(inp: Inputs, q: float, p_static: float, dp_allow: float, guess: float) -> float:

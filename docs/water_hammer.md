@@ -1,6 +1,6 @@
 # Water hammer in domestic hot water pipes: method, limits and sources
 
-This note goes with the `waterhammer` package. It explains what water hammer is, when a domestic hot
+This note goes with the `waterhammer` package, its Excel twin `excel/waterhammer.xlsx`, and the full derivation in `docs/physics/water_hammer_physics.pdf`. It explains what water hammer is, when a domestic hot
 water (DHW) installation needs protection against it, how the model decides, and where each threshold
 comes from. The default context is a dwelling DHW branch: 1 to 6 l/min, 10 to 15 mm OD copper, PE-X,
 PB or multilayer (MLCP) pipe, 2.5 to 4 bar rest pressure, 50 to 60 °C water.
