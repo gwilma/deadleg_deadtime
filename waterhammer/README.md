@@ -44,3 +44,13 @@ limit" is the Michaud estimate rather than the bisection against the simulation.
 [`docs/physics/water_hammer_physics.pdf`](../docs/physics/water_hammer_physics.pdf) (Tufte-LaTeX)
 derives every equation the model uses and works an example. Rebuild the figures with
 `python docs/physics/figures.py` (Altair + vl-convert) and the PDF with `latexmk -pdf` in `docs/physics`.
+
+## Web calculator
+
+[`web/index.html`](../web/index.html) is the same model as a single self-contained web page: change any
+input and the verdict, checks, remedies and a simulated pressure trace update at once. It is built by
+`python web/build_page.py` from `web/template.html` and `web/model.js` (a port of `model.py`), with
+the property tables injected from `properties.py`. `python web/check_js.py` runs the JavaScript under
+Node for six cases and compares every output with the Python model (they agree to about 1e-12). The
+page is written to be published as a claude.ai Artifact, which adds the HTML skeleton; to open it
+locally, wrap it in `<html><body>...</body></html>`.

@@ -1,0 +1,371 @@
+<title>Water Hammer Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: an engineer's calculation sheet. Inputs in a narrow left column,
+   verdict and evidence on the right; stacks to one column on a phone. */
+:root {
+  --bg: #F3F5F6;
+  --surface: #FFFFFF;
+  --ink: #121212;
+  --muted: #5B6871;
+  --rule: #D5DCE0;
+  --accent: #E3120B;      /* fail, brand rule */
+  --pass: #2E8B7D;
+  --warn: #B07D00;
+  --line2: #006BA2;
+  --field: #FBFCFC;
+  --chip-fail-bg: #FDE7E6;
+  --chip-pass-bg: #E3F2EF;
+  --chip-warn-bg: #FBF1D9;
+  --font-ui: "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-text: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+  --step-3: 2.25rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101518; --surface: #182024; --ink: #EDF1F3; --muted: #9BA9B2; --rule: #2C383F;
+    --accent: #FF5246; --pass: #4FC0AE; --warn: #E5B53A; --line2: #5AAEE8; --field: #1D262B;
+    --chip-fail-bg: #3A1D1B; --chip-pass-bg: #16322E; --chip-warn-bg: #352C14;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101518; --surface: #182024; --ink: #EDF1F3; --muted: #9BA9B2; --rule: #2C383F;
+  --accent: #FF5246; --pass: #4FC0AE; --warn: #E5B53A; --line2: #5AAEE8; --field: #1D262B;
+  --chip-fail-bg: #3A1D1B; --chip-pass-bg: #16322E; --chip-warn-bg: #352C14;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: var(--step-0); line-height: 1.45; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; }
+header { border-top: 4px solid var(--accent); padding-top: 14px; display: grid; gap: 4px; margin-bottom: 20px; }
+h1 { font-size: var(--step-3); font-weight: 700; margin: 0; letter-spacing: -0.01em; text-wrap: balance; line-height: 1.1; }
+.lede { font-family: var(--font-text); font-size: var(--step-1); color: var(--muted); margin: 0; max-width: 62ch; }
+.grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+form { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; display: grid; gap: 18px; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; min-width: 0; }
+legend { font-size: var(--step--1); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 0; margin-bottom: 4px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+label { display: block; font-size: var(--step--1); color: var(--muted); min-width: 0; }
+label > input, label > select { display: block; margin-top: 3px; }
+label span.u { color: var(--muted); font-weight: 400; }
+input, select { font: inherit; font-size: var(--step-0); color: var(--ink); background: var(--field); border: 1px solid var(--rule); border-radius: 4px; padding: 7px 8px; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--line2); outline-offset: 1px; }
+.hint { font-family: var(--font-text); font-size: var(--step--1); color: var(--muted); margin: 0; }
+details { border-top: 1px solid var(--rule); padding-top: 12px; }
+summary { cursor: pointer; font-size: var(--step--1); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+details[open] summary { margin-bottom: 10px; }
+.results { display: grid; gap: 20px; min-width: 0; }
+.verdict { background: var(--surface); border: 1px solid var(--rule); border-left: 6px solid var(--pass); border-radius: 6px; padding: 16px 18px; display: grid; gap: 6px; }
+.verdict.fail { border-left-color: var(--accent); }
+.verdict.error { border-left-color: var(--warn); }
+.verdict h2 { margin: 0; font-size: var(--step-2); line-height: 1.15; }
+.verdict.fail h2 { color: var(--accent); }
+.verdict p { margin: 0; font-family: var(--font-text); max-width: 70ch; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+@media (max-width: 620px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+.stat .k { font-size: var(--step--1); color: var(--muted); }
+.stat .v { font-size: var(--step-2); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat .v small { font-size: var(--step--1); font-weight: 400; color: var(--muted); margin-left: 2px; }
+.stat .s { font-size: var(--step--1); color: var(--muted); font-variant-numeric: tabular-nums; }
+section.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; min-width: 0; }
+section.card h3 { margin: 0 0 10px; font-size: var(--step-1); }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: var(--step--1); font-weight: 500; color: var(--muted); }
+td.num, th.num { text-align: right; white-space: nowrap; }
+.chip { display: inline-block; font-size: var(--step--1); font-weight: 700; letter-spacing: 0.04em; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.pass { background: var(--chip-pass-bg); color: var(--pass); }
+.chip.fail { background: var(--chip-fail-bg); color: var(--accent); }
+.chip.warn { background: var(--chip-warn-bg); color: var(--warn); }
+.src { font-family: var(--font-text); font-size: var(--step--1); color: var(--muted); }
+ol.remedies { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; font-family: var(--font-text); }
+ol.remedies b { font-family: var(--font-ui); }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--step--1); color: var(--muted); }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+svg { display: block; width: 100%; height: auto; }
+svg text { font-family: var(--font-ui); font-size: 12px; fill: var(--muted); }
+.method { font-family: var(--font-text); color: var(--muted); font-size: var(--step--1); max-width: 80ch; display: grid; gap: 8px; }
+.method p { margin: 0; }
+.busy { opacity: 0.55; transition: opacity 0.15s; }
+@media (prefers-reduced-motion: reduce) { .busy { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Water Hammer Check</h1>
+    <p class="lede">Will this hot water pipe need a surge arrester? Enter the run, the flow and the valve that closes it. The page simulates the pressure surge and checks it against the 2&nbsp;bar limit.</p>
+  </header>
+
+  <div class="grid">
+    <form id="f" autocomplete="off">
+      <fieldset>
+        <legend>Pipe</legend>
+        <label for="preset">Pipe
+          <select id="preset"></select>
+        </label>
+        <div id="customPipe" class="row" hidden>
+          <label for="od">Outside diameter <span class="u">mm</span><input id="od" type="number" step="0.1" min="4" value="12"></label>
+          <label for="wall">Wall <span class="u">mm</span><input id="wall" type="number" step="0.05" min="0.2" value="2.0"></label>
+          <label for="material">Material<select id="material"></select></label>
+          <label for="al">Aluminium layer <span class="u">mm</span><input id="al" type="number" step="0.05" min="0" value="0"></label>
+        </div>
+        <label for="restraint">How the pipe is held
+          <select id="restraint">
+            <option value="anchored">Clipped or buried (anchored)</option>
+            <option value="expansion_joints">Free to move lengthwise</option>
+            <option value="upstream_anchor">Anchored at the supply end only</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Run and flow</legend>
+        <div class="row">
+          <label for="length">Length <span class="u">m</span><input id="length" type="number" step="0.5" min="0.1" value="8"></label>
+          <label for="flow">Flow <span class="u">L/min</span><input id="flow" type="number" step="0.5" min="0.1" value="6"></label>
+          <label for="pressure">Rest pressure <span class="u">bar g</span><input id="pressure" type="number" step="0.1" min="0.2" value="3"></label>
+          <label for="temperature">Water <span class="u">&deg;C</span><input id="temperature" type="number" step="1" min="1" max="99" value="55"></label>
+        </div>
+        <p class="hint">Measure the length from the valve back to the nearest point that holds the pressure steady: a manifold, a much larger pipe, the cylinder or an expansion vessel.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Valve</legend>
+        <label for="valve">Valve that closes the flow<select id="valve"></select></label>
+        <label for="closure" id="closureWrap" hidden>Effective closure time <span class="u">s</span><input id="closure" type="number" step="0.01" min="0" value="0.05"></label>
+        <p class="hint" id="valveHint"></p>
+      </fieldset>
+
+      <details id="limitsBox">
+        <summary>Limits</summary>
+        <div class="row">
+          <label for="maxSurge">Surge limit <span class="u">bar</span><input id="maxSurge" type="number" step="0.1" min="0.1" value="2"></label>
+          <label for="rating">Pipe rating <span class="u">bar g</span><input id="rating" type="number" step="0.5" min="1" value="10"></label>
+          <label for="advisoryVelocity">Advisory velocity <span class="u">m/s</span><input id="advisoryVelocity" type="number" step="0.1" min="0.1" value="1.5"></label>
+          <label for="gasIndex">Arrester gas index<input id="gasIndex" type="number" step="0.1" min="1" max="1.67" value="1.4"></label>
+        </div>
+        <p class="hint">2&nbsp;bar is the rise allowed by EN&nbsp;806-2 and DIN&nbsp;1988-200 (VDI&nbsp;6006). Use the lowest rating of the pipe and fittings at the water temperature.</p>
+      </details>
+    </form>
+
+    <div class="results" id="results" aria-live="polite">
+      <div class="verdict" id="verdict"><h2 id="vTitle">Calculating</h2><p id="vText"></p></div>
+
+      <div class="stats" id="stats"></div>
+
+      <section class="card">
+        <div class="chart-head">
+          <h3>Pressure at the valve</h3>
+          <div class="legend">
+            <span><i style="border-color:var(--accent)"></i>Simulated</span>
+            <span><i style="border-color:var(--muted);border-top-style:dashed"></i>Rest pressure and limit</span>
+          </div>
+        </div>
+        <div id="chart"></div>
+      </section>
+
+      <section class="card">
+        <h3>Checks</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Check</th><th class="num">Value</th><th class="num">Limit</th><th>Result</th></tr></thead>
+            <tbody id="checks"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" id="remedyCard">
+        <h3 id="remedyTitle">Ways to fix it</h3>
+        <ol class="remedies" id="remedies"></ol>
+      </section>
+
+      <div class="method">
+        <p><b>Method.</b> Wave speed from the Korteweg formula for a thick-walled pipe. The surge is the larger of the closed-form estimate (Joukowsky &rho;av if the valve closes within the critical time 2L/a, otherwise Michaud 2&rho;Lv/t) and a method-of-characteristics simulation of the pipe with steady friction and an orifice valve whose opening closes at a steady rate. Water properties from IAPWS-95; plastic moduli are indicative short-term values.</p>
+        <p><b>Sources.</b> 2&nbsp;bar surge limit: EN&nbsp;806-2 and DIN&nbsp;1988-200 as quoted in VDI&nbsp;6006:2017 &sect;4.3. Peak pressure: Water Supply (Water Fittings) Regulations 1999, Schedule&nbsp;2. Advisory velocity: Uniform Plumbing Code 610.12. Valve closure times are engineering estimates; measure the valve if a result is marginal. This page runs the same model as the Python package and Excel workbook in the gwilma/deadleg_deadtime repository, where the physics note derives every equation.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*MODEL*/
+</script>
+<script>
+(function () {
+  "use strict";
+  const M = window.WaterHammer, D = M.DATA;
+  const $ = id => document.getElementById(id);
+  const VALVE_LABELS = {
+    solenoid: "Solenoid valve (dishwasher, washing machine, sensor tap, digital shower)",
+    single_lever_mixer: "Single-lever mixer tap",
+    quarter_turn: "Quarter-turn tap or ball valve",
+    thermostatic_shower: "Thermostatic shower valve",
+    screw_down: "Screw-down (washer) tap",
+    custom: "Other: enter the closure time",
+  };
+  const MAT_LABELS = { copper: "Copper", stainless: "Stainless steel", pex: "PE-X", pb: "Polybutylene (PB)", pert: "PE-RT" };
+
+  for (const [k, p] of Object.entries(D.presets)) $("preset").add(new Option(p.name, k));
+  $("preset").add(new Option("Other: enter the dimensions", "custom"));
+  for (const k of Object.keys(D.materials)) $("material").add(new Option(MAT_LABELS[k] || k, k));
+  $("material").value = "pex";
+  for (const k of [...Object.keys(D.valves), "custom"]) $("valve").add(new Option(VALVE_LABELS[k] || k, k));
+  $("preset").value = "copper_10x0.6";
+  $("valve").value = "solenoid";
+
+  const num = id => parseFloat($(id).value);
+  const fmt = (x, d = 2) => Number.isFinite(x) ? x.toLocaleString("en-GB", { minimumFractionDigits: d, maximumFractionDigits: d }) : "&infin;";
+
+  function readInputs() {
+    const custom = $("preset").value === "custom";
+    $("customPipe").hidden = !custom;
+    const vcustom = $("valve").value === "custom";
+    $("closureWrap").hidden = !vcustom;
+    const pipe = custom
+      ? M.makePipe(num("od"), num("wall"), $("material").value, num("al") || 0)
+      : (p => M.makePipe(p.od, p.wall, p.material, p.al, p.name))(D.presets[$("preset").value]);
+    const closure = vcustom ? num("closure") : D.valves[$("valve").value];
+    $("valveHint").textContent = vcustom ? "The time over which the valve actually throttles the flow, usually the last part of its travel."
+      : "Assumed effective closure time: " + (closure * 1000).toFixed(0) + " ms. Choose Other to enter a measured value.";
+    const inp = { pipe, closure, restraint: $("restraint").value };
+    for (const id of ["length", "flow", "pressure", "temperature", "maxSurge", "rating", "advisoryVelocity", "gasIndex"]) {
+      inp[id] = num(id);
+      if (!Number.isFinite(inp[id])) throw new Error("Enter a number for " + $(id).closest("label").firstChild.textContent.trim().toLowerCase() + ".");
+    }
+    if (!Number.isFinite(closure)) throw new Error("Enter a closure time in seconds.");
+    return inp;
+  }
+
+  function stat(k, v, unit, s) {
+    return `<div class="stat"><span class="k">${k}</span><span class="v">${v}<small>${unit}</small></span><span class="s">${s || "&nbsp;"}</span></div>`;
+  }
+
+  let render = function (inp, r) {
+    const fail = r.required;
+    $("verdict").className = "verdict" + (fail ? " fail" : "");
+    $("vTitle").textContent = fail ? "Mitigation required" : "No mitigation needed";
+    const why = [];
+    const byKey = Object.fromEntries(r.checks.map(c => [c.key, c]));
+    if (!byKey.surge.passed) why.push(`the surge of ${fmt(r.designSurgeBar, 1)} bar is above the ${fmt(inp.maxSurge, 1)} bar limit`);
+    if (!byKey.peak.passed) why.push(`the peak of ${fmt(r.peakBar, 1)} bar g exceeds the ${fmt(inp.rating, 1)} bar pipe rating`);
+    if (!byKey.min.passed) why.push("the pressure wave that follows would pull the water below its vapour pressure, so the column would break");
+    $("vText").innerHTML = fail
+      ? "On this run, " + why.join("; ") + "."
+      : `The surge peaks at ${fmt(r.designSurgeBar, 2)} bar above rest pressure, within the ${fmt(inp.maxSurge, 1)} bar limit.` +
+        (byKey.vel.passed ? "" : ` The velocity of ${fmt(r.velocity, 2)} m/s is above the advisory ${fmt(inp.advisoryVelocity, 1)} m/s, so expect noise; consider the next pipe size up.`);
+
+    $("stats").innerHTML =
+      stat("Design surge", fmt(r.designSurgeBar, 1), "bar", `formula ${fmt(r.closedFormBar, 1)} &middot; simulation ${fmt(r.mocSurgeBar, 1)}`) +
+      stat("Velocity", fmt(r.velocity, 2), "m/s", `bore ${fmt(inp.pipe.D * 1000, 1)} mm`) +
+      stat("Wave speed", fmt(r.waveSpeed, 0), "m/s", `Joukowsky &rho;av ${fmt(r.joukowskyBar, 1)} bar`) +
+      stat("Critical time 2L/a", fmt(r.criticalTime * 1000, 1), "ms", `valve ${fmt(inp.closure * 1000, 0)} ms: ${r.regime === "rapid" ? "fast" : "slow"} closure`);
+
+    const chip = c => c.passed ? '<span class="chip pass">Pass</span>' : (c.governs ? '<span class="chip fail">Fail</span>' : '<span class="chip warn">Advisory</span>');
+    const lim = c => c.key === "min" ? `above ${fmt(c.limit, 2)}` : `at most ${fmt(c.limit, c.key === "vel" ? 1 : 1)}`;
+    $("checks").innerHTML = r.checks.map(c =>
+      `<tr><td>${c.name}</td><td class="num">${fmt(c.value, 2)} ${c.unit}</td><td class="num">${lim(c)} ${c.unit}</td><td>${chip(c)}</td></tr>`).join("");
+
+    const rem = [];
+    if (fail) {
+      $("remedyTitle").textContent = "Ways to fix it";
+      rem.push(`<b>Fit a water hammer arrester</b> at the valve, as close to it as possible. Indicative gas volume about ${fmt(r.arresterMl, 0)} ml, precharged to the rest pressure; choose the product from the manufacturer's sizing.`);
+      if (Number.isFinite(r.minClosureTime) && r.minClosureTime > inp.closure)
+        rem.push(`<b>Use a slower-closing valve</b>: an effective closure time of at least ${fmt(r.minClosureTime, 2)} s keeps the surge within the limit.`);
+      rem.push(`<b>Reduce the velocity</b>: at ${fmt(r.maxFlowInstant, 1)} L/min or less (${fmt(r.maxVelocityInstant, 2)} m/s) even an instant closure stays within the limit. Use a larger pipe or a flow regulator.`);
+      rem.push(`<b>Shorten the run</b> to the nearest steady-pressure point, or lower the rest pressure with a pressure-reducing valve if the peak-pressure check fails.`);
+    } else {
+      $("remedyTitle").textContent = "Margin";
+      rem.push(`Even an instant closure stays within the limit at up to ${fmt(r.maxFlowInstant, 1)} L/min in this pipe.`);
+      if (r.minClosureTime > 0) rem.push(`The valve must take at least ${fmt(r.minClosureTime, 2)} s to close for this flow; a faster valve on the same run would fail.`);
+    }
+    $("remedies").innerHTML = rem.map(x => `<li>${x}</li>`).join("");
+    drawChart(inp, r);
+  };
+
+  function niceStep(span, target) {
+    const raw = span / target, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+  }
+
+  function drawChart(inp, r) {
+    const W = Math.max(340, Math.round($("chart").clientWidth || 720)), H = W < 520 ? 260 : 300, m = { l: 44, r: W < 520 ? 84 : 112, t: 26, b: 38 };
+    const t = r.trace.t, p = r.trace.p.map(x => x / 1e5);
+    const n = t.length, stride = Math.max(1, Math.floor(n / 900));
+    const pts = [];
+    for (let i = 0; i < n; i += stride) pts.push([t[i] * 1000, p[i]]);
+    pts.push([t[n - 1] * 1000, p[n - 1]]);
+    const xMax = t[n - 1] * 1000;
+    const limitLine = inp.pressure + inp.maxSurge;
+    let yMin = Math.min(0, ...p), yMax = Math.max(limitLine, ...p);
+    const ys = niceStep(yMax - yMin, 5);
+    yMin = Math.floor(yMin / ys) * ys; yMax = Math.ceil(yMax * 1.02 / ys) * ys;
+    const xs = niceStep(xMax, W < 520 ? 4 : 6);
+    const X = x => m.l + (x / xMax) * (W - m.l - m.r);
+    const Y = y => m.t + (1 - (y - yMin) / (yMax - yMin)) * (H - m.t - m.b);
+    let g = "";
+    for (let y = yMin; y <= yMax + 1e-9; y += ys) {
+      g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--rule)" stroke-width="1"/>`;
+      g += `<text x="${m.l - 6}" y="${Y(y) + 4}" text-anchor="end">${+y.toFixed(6)}</text>`;
+    }
+    for (let x = 0; x <= xMax + 1e-9; x += xs) {
+      g += `<line x1="${X(x)}" x2="${X(x)}" y1="${H - m.b}" y2="${H - m.b + 4}" stroke="var(--ink)" stroke-width="1"/>`;
+      g += `<text x="${X(x)}" y="${H - m.b + 17}" text-anchor="middle">${+x.toFixed(6)}</text>`;
+    }
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="var(--ink)" stroke-width="1"/>`;
+    g += `<text x="${(m.l + W - m.r) / 2}" y="${H - 4}" text-anchor="middle">Time after the valve starts to close, ms</text>`;
+    g += `<text x="${m.l - 38}" y="12" text-anchor="start">bar g</text>`;
+    const ref = (y, label, dash) => {
+      if (y < yMin || y > yMax) return "";
+      return `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="${dash}"/>` +
+             `<text x="${W - m.r + 6}" y="${Y(y) + 4}">${label}</text>`;
+    };
+    g += ref(inp.pressure, "Rest " + fmt(inp.pressure, 1), "5 4");
+    g += ref(limitLine, "Limit " + fmt(limitLine, 1), "5 4");
+    if (r.vapourGaugeBar >= yMin) g += ref(r.vapourGaugeBar, "Vapour " + fmt(r.vapourGaugeBar, 2), "2 3");
+    const d = pts.map(([x, y], i) => (i ? "L" : "M") + X(x).toFixed(1) + " " + Y(y).toFixed(1)).join("");
+    g += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
+    const iPk = p.indexOf(Math.max(...p));
+    g += `<circle cx="${X(t[iPk] * 1000)}" cy="${Y(p[iPk])}" r="3.5" fill="var(--accent)"/>`;
+    g += `<text x="${X(t[iPk] * 1000) + 7}" y="${Y(p[iPk]) + 4}" style="fill:var(--ink)">${fmt(p[iPk], 1)}</text>`;
+    $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Simulated pressure at the valve against time">${g}</svg>`;
+  }
+
+  let timer = null;
+  function run() {
+    $("results").classList.add("busy");
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      try {
+        const inp = readInputs();
+        render(inp, M.assess(inp));
+      } catch (e) {
+        $("verdict").className = "verdict error";
+        $("vTitle").textContent = "Check the inputs";
+        $("vText").textContent = e.message;
+      }
+      $("results").classList.remove("busy");
+    }, 120);
+  }
+  $("f").addEventListener("input", run);
+  $("f").addEventListener("change", run);
+  $("f").addEventListener("submit", e => e.preventDefault());
+  let last = null, rt = null;
+  const _render = render;
+  render = function (inp, r) { last = [inp, r]; _render(inp, r); };
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => last && drawChart(...last), 150); });
+  run();
+})();
+</script>
