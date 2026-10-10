@@ -1,3 +1,12 @@
 __pycache__/
 *.egg-info/
 .pytest_cache/
+
+# LaTeX build files
+docs/physics/*.aux
+docs/physics/*.log
+docs/physics/*.out
+docs/physics/*.bbl
+docs/physics/*.blg
+docs/physics/*.fls
+docs/physics/*.fdb_latexmk

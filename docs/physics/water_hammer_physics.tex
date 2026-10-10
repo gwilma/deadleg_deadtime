@@ -1,0 +1,522 @@
+\documentclass[a4paper,justified,nobib]{tufte-handout}
+% Layout follows the thermal-model note (docs/physics/physics.tex on the
+% deadleg branch): a4paper, justified, sidenotes, symbols defined with units
+% at first use. nobib: natbib + bibtex give the reference list.
+
+\usepackage[round]{natbib}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\definecolor{accent}{HTML}{E3120B}
+\definecolor{ink}{HTML}{222222}
+\graphicspath{{figures/}}
+
+\newcommand{\dd}{\mathrm{d}}
+\setlength{\emergencystretch}{1.5em}
+\newcommand{\degC}{\,\textdegree{}C}
+\newcommand{\lpm}{\,L/min}
+% citations as sidenotes, with the full list at the end
+\newcommand{\sidecite}[2][]{\sidenote{\citet{#2}\ifx&#1&\else, #1\fi.}}
+
+\title{Water hammer in domestic hot water pipes}
+\author{The physics of pressure surges, and how the waterhammer model decides whether a pipe needs protection}
+\date{4 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent When a tap or an appliance valve shuts, the water flowing in the
+pipe behind it has to stop. Its momentum does not vanish: it becomes a pressure
+wave that runs back and forth along the pipe, and the pressure at the valve can
+rise by many times the normal supply pressure. This is \emph{water hammer}.
+This note sets out the physics the waterhammer model uses to decide whether a
+domestic hot water branch needs protection against it: how fast the wave
+travels, how large the surge is for fast and slow valves, how the model
+simulates the transient, when the water column can break apart, and how large a
+gas-cushion arrester has to be. It ends with the acceptance limits, a worked
+example and screening results. The Python package and the Excel workbook
+implement exactly these equations, and agree with each other to machine
+precision.
+\end{abstract}
+
+\section{The setting}
+
+Consider a straight, horizontal pipe of length $L$ (m) with a circular bore of
+inside diameter $D$ (m) and a wall of thickness $e$ (m). The bore's
+cross-sectional area is $A=\pi D^2/4$ (m$^2$). One end of the pipe joins a
+point where the pressure stays nearly constant whatever happens in the pipe: a
+much larger main, a manifold, a hot water cylinder or an expansion vessel. Call
+this the \emph{reflection point}. The other end has a valve: a tap, a shower
+valve or an appliance's solenoid valve.
+
+Water of density $\rho$ (kg/m$^3$) flows through the pipe at a volume flow rate
+$Q$ (m$^3$/s), so its mean velocity is $v=Q/A$ (m/s).\sidenote{At 6\lpm{},
+$Q=10^{-4}$\,m$^3$/s. In 10\,mm copper (bore 8.8\,mm, $A=6.1\times10^{-5}$\,m$^2$)
+that is $v=1.64$\,m/s.} With no flow, the gauge pressure everywhere in the
+pipe is the \emph{rest pressure} $p_s$ (Pa), the pressure the supply holds at
+the reflection point. In this note a gauge pressure is measured relative to the
+atmosphere, and $1\text{ bar}=10^5$\,Pa.
+
+The setting is a domestic hot water branch: flows of 1 to 6\lpm{}, pipes of
+about 10 to 15\,mm outside diameter in copper, PE-X (cross-linked
+polyethylene), PB (polybutylene) or multilayer composite (MLCP), rest pressures
+of 2.5 to 4\,bar and water at 50 to 60\degC{}.
+
+\section{The mechanism}
+
+When the valve shuts, the layer of water touching it stops first. Its pressure
+rises, which compresses that water slightly and stretches the pipe wall around
+it. The next layer upstream then meets stationary water and stops in turn. A
+front of raised pressure, with stationary water behind it, so runs upstream at
+the \emph{wave speed} $a$ (m/s). As the section on wave speed shows, $a$ is
+close to the speed of sound in water for copper and much lower for plastic.
+
+The front reaches the reflection point after a time $L/a$. At that moment all
+the water in the pipe is at rest and above the rest pressure, while the
+reflection point is still at $p_s$. Water therefore starts to flow back out of
+the pipe, and a wave that restores the pressure to $p_s$ travels down to the
+valve. It arrives at time
+\begin{equation}
+  T_c = \frac{2L}{a},
+  \label{eq:tc}
+\end{equation}
+where $T_c$ (s) is the \emph{critical time}.\sidenote{A 10\,m copper run has
+$T_c\approx15$\,ms; the same run in PE-X has $T_c\approx70$\,ms.} Because the
+water is now moving away from the closed valve, the pressure there falls below
+$p_s$, and a low-pressure wave goes back upstream. With no friction the cycle
+would repeat for ever, the pressure at the valve swinging above and below $p_s$
+with period $4L/a$. Friction damps it, and in real installations so do trapped
+air, flexible hoses and fittings that move.
+
+\section{Surge from a fast closure}
+
+Let $\Delta v$ (m/s) be the drop in velocity across the wave front; for a valve
+that shuts completely, $\Delta v=v$. Let $\Delta p$ (Pa) be the rise in
+pressure across the front.
+
+Take a short length of pipe around the front. Relative to the pipe, the front
+moves upstream at $a-v$, while the water ahead of it moves downstream at $v$, so
+the front meets new water at the relative speed $a$. In a short time $\delta t$
+(s) it therefore brings a mass $\rho A a\,\delta t$ (kg) of water to a stop
+(strictly, from $v$ to $v-\Delta v$). Newton's second law says that the
+impulse of the net force equals the change of momentum. The net force is the
+pressure difference $\Delta p$ acting on the area $A$, so
+\begin{equation}
+  \Delta p\,A\,\delta t = \left(\rho A a\,\delta t\right)\Delta v
+  \quad\Longrightarrow\quad
+  \Delta p = \rho\,a\,\Delta v .
+  \label{eq:joukowsky}
+\end{equation}
+This is Joukowsky's equation.\sidecite{joukowsky1904} It gives the full surge
+whenever the valve stops the flow before the first returning wave can reach it,
+that is when the valve's effective closure time $t_v$ (s) is no more than
+$T_c$. The \emph{effective} closure time is the time over which the valve
+actually throttles the flow, usually only the last part of the handle's
+travel. The surge depends neither on the length of the pipe nor on the
+pressure already in it.\sidenote{In copper, $\rho a\approx13$\,bar per m/s.
+A flow of 1\,m/s stopped instantly gives 13\,bar, more than six times the
+2\,bar limit set out under Acceptance limits.}
+
+\section{Wave speed}
+\label{sec:wavespeed}
+
+The wave speed follows from conservation of mass across the front. Water keeps
+arriving at the front at velocity $v$ but leaves it at $v-\Delta v$, so in time
+$\delta t$ a volume $A\,\Delta v\,\delta t$ of extra water has to be stored in
+the length $a\,\delta t$ the front has swept. There are two places to store it.
+The water is compressed: its density rises by a fraction $\Delta p/K$, where $K$
+(Pa) is the water's \emph{bulk modulus}. And the pipe swells: its bore area
+rises by a fraction $\Delta A/A$. So
+\begin{equation}
+  A\,\Delta v\,\delta t = A\,a\,\delta t\left(\frac{\Delta p}{K}+\frac{\Delta A}{A}\right).
+  \label{eq:mass}
+\end{equation}
+
+\paragraph{How much the pipe swells.} The pressure rise $\Delta p$ adds a hoop
+(circumferential) stress $\Delta p\,D/(2e)$ (Pa) to a thin wall. If $E$ (Pa) is
+the wall material's Young's modulus, the hoop strain, the fractional increase in
+diameter, is $\Delta p\,D/(2eE)$, and the area grows by twice that fraction:
+$\Delta A/A=\Delta p\,D/(eE)$. Real pipes are not quite thin, and how the pipe
+is held lengthwise changes the answer slightly, because a pipe that cannot
+lengthen develops an axial stress as it swells. Both effects are carried by a
+dimensionless \emph{restraint factor} $\psi$, so that
+\begin{equation}
+  \frac{\Delta A}{A}=\psi\,\frac{\Delta p\,D}{E\,e}.
+\end{equation}
+For a thick-walled pipe whose material has Poisson's ratio $\nu$ (dimensionless:
+the lateral contraction per unit of stretch),\sidecite[\S2.4]{wylie1993}
+\begin{equation}
+  \psi = 2\,\frac{e}{D}\,(1+\nu) + \frac{D}{D+e}\,\phi,
+  \label{eq:psi}
+\end{equation}
+where $\phi=1-\nu^2$ for a pipe anchored against lengthwise movement throughout
+(clipped at short intervals, or buried in a screed), $\phi=1$ for a pipe free to
+move lengthwise, and $\phi=1-\nu/2$ for a pipe anchored only at its upstream
+end.\sidenote{As $e/D\to0$ the first term vanishes and $D/(D+e)\to1$, so a thin
+pipe free to move has $\psi=1$, the textbook form.}
+
+\paragraph{The result.} Substituting $\Delta v=\Delta p/(\rho a)$ from
+Equation~\ref{eq:joukowsky} into Equation~\ref{eq:mass} and cancelling
+$A\,\delta t\,\Delta p$ gives $1/(\rho a)=a\left(1/K+\psi D/(Ee)\right)$, which
+rearranges to the Korteweg formula
+\begin{equation}
+  a = \sqrt{\frac{K/\rho}{1+\psi\,\dfrac{K D}{E e}}}\,.
+  \label{eq:wavespeed}
+\end{equation}
+In a rigid pipe ($E\to\infty$), $a$ becomes $\sqrt{K/\rho}$, the speed of sound
+in water: about 1500\,m/s. Copper ($E\approx117$\,GPa) is stiff enough to stay
+close to that. Plastics are more than a hundred times more flexible, so the
+pipe term dominates and $a$ falls to a few hundred metres per second
+(Figure~\ref{fig:wavespeed}).
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{wave_speed.pdf}
+  \caption{Wave speed $a$ against the ratio of bore to wall thickness, $D/e$,
+  at 55\degC{}. The multilayer (MLCP) points assume an aluminium layer
+  0.2\,mm thick; the wall's hoop stiffness is the thickness-weighted mean of
+  the aluminium and PE-RT (the plastic either side of it), because all the
+  layers share one hoop strain.}
+  \label{fig:wavespeed}
+\end{figure}
+
+\paragraph{Properties used.} For water, $K=\rho c^2$, where $c$ (m/s) is the
+speed of sound in water; $\rho$ and $c$ come from the IAPWS-95 formulation as
+functions of temperature.\sidecite{iapws95} $K$ is largest near 50\degC{}, so
+hot water gives a slightly \emph{higher} surge than cold water in a copper
+pipe. For plastics, $E$ has to be the short-term (dynamic) modulus, because a
+surge loads the wall for milliseconds, not years. It falls steeply with
+temperature: for PE-X the model uses 0.70\,GPa at 20\degC{} and 0.42\,GPa at
+60\degC{}. These are indicative values, and a manufacturer's figure should
+replace them where one exists.
+
+\section{Slower closure}
+
+If the valve takes longer than $T_c$ to shut, waves returning from the
+reflection point arrive while it is still closing and cancel part of the rise.
+
+\paragraph{Michaud's formula.} Suppose the velocity at the valve falls at a
+steady rate, from $v$ to zero over $t_v$. Each instant of closure sends a small
+Joukowsky step up the pipe, so the pressure at the valve climbs in proportion
+to the velocity lost so far, $\rho a\,v\,t/t_v$ at time $t$ (s) after closure
+starts. At $t=T_c$ the first returning wave arrives and the climb stops: from
+then on the steps still being sent are cancelled by those coming back. The peak
+is therefore the Joukowsky surge scaled by $T_c/t_v$:
+\begin{equation}
+  \Delta p_{\max} = \rho a \Delta v\,\frac{T_c}{t_v} = \frac{2\rho L\,\Delta v}{t_v}
+  \qquad (t_v > T_c).
+  \label{eq:michaud}
+\end{equation}
+The wave speed has cancelled. For slow closures the surge depends only on the
+run length, the velocity and the closure time, not on the pipe
+material.\sidenote{For a steady fall in velocity in a frictionless pipe,
+Equation~\ref{eq:michaud} is the exact peak. The pressure then oscillates
+between $p_s$ and this peak, about a mean of $\rho L\Delta v/t_v$, which is what
+treating the water as a rigid column predicts.}
+
+\paragraph{Real valves.} A tap discharging to atmosphere does not reduce the
+velocity at a steady rate. Its flow obeys the orifice law
+\begin{equation}
+  Q = \tau(t)\,Q_0\sqrt{H_v/H_{v0}},
+  \label{eq:orifice}
+\end{equation}
+where $\tau$ (dimensionless) is the fraction of the valve's opening that is
+still open, $Q_0$ (m$^3$/s) is the steady flow before closure, and $H_v$ (m) is
+the gauge pressure just upstream of the valve expressed as a height of water,
+$H_v=p/(\rho g)$, with $p$ (Pa) that gauge pressure and $g=9.81$\,m/s$^2$ the
+acceleration due to gravity. $H_{v0}$ is its steady value while the water
+flows. With $\tau$ falling at a steady rate, most of the flow is choked only
+near the end of the stroke, which is why the effective closure time is shorter
+than the handle's travel. When $t_v\gg T_c$ the water behaves as a rigid column,
+and Newton's law for the whole column gives
+\begin{equation}
+  \frac{L}{gA}\frac{\dd Q}{\dd t} = H_R - h_f(Q) - H_v,
+  \label{eq:rigid}
+\end{equation}
+where $H_R=p_s/(\rho g)$ (m) is the head at the reflection point and $h_f$ (m)
+the head lost to friction along the pipe at flow $Q$. The model uses this limit
+to check its simulation.
+
+\section{Simulating the transient}
+
+To handle any valve and closure time, the model solves the one-dimensional
+water hammer equations.\sidecite[ch.~3]{wylie1993} Let $x$ (m) be the distance
+along the pipe from the reflection point, $t$ (s) time, and $H(x,t)$ (m) and
+$Q(x,t)$ (m$^3$/s) the local pressure head and flow. Mass and momentum
+conservation give
+\begin{align}
+  \frac{\partial H}{\partial t} + \frac{a^2}{gA}\frac{\partial Q}{\partial x} &= 0, \\
+  \frac{\partial Q}{\partial t} + gA\frac{\partial H}{\partial x} + \frac{f\,Q|Q|}{2DA} &= 0,
+\end{align}
+where $f$ (dimensionless) is the Darcy friction factor. The model takes
+$f=64/Re$ for laminar flow ($Re<2300$) and the Swamee--Jain formula
+$f=0.25\big/\left[\log_{10}\!\left(\varepsilon/3.7D+5.74/Re^{0.9}\right)\right]^2$
+above that. Here $Re=\rho vD/\mu$ is the Reynolds number (dimensionless), $\mu$
+(Pa\,s) the water's dynamic viscosity and $\varepsilon$ (m) the roughness of the
+bore. The friction head over the whole pipe is then
+$h_f=f\,(L/D)\,v^2/(2g)$.
+
+\paragraph{The method of characteristics.} Along lines in the $(x,t)$ plane
+whose slope is $\dd x/\dd t=\pm a$, the two partial differential equations
+reduce to ordinary ones. Divide the pipe into $N$ equal reaches of length
+$\Delta x=L/N$ (m), and step time by $\Delta t=\Delta x/a$ (s), so that the
+characteristic lines join neighbouring grid points. Write $H_i$ and $Q_i$ for
+the values at node $i$ (node $0$ is the reflection point, node $N$ the valve) at
+the previous time step, and $H_P$, $Q_P$ for the new values at node $i$. Then
+\begin{align}
+  C^+:&\quad H_P = C_P - B\,Q_P, & C_P &= H_{i-1} + B\,Q_{i-1} - R\,Q_{i-1}|Q_{i-1}|, \\
+  C^-:&\quad H_P = C_M + B\,Q_P, & C_M &= H_{i+1} - B\,Q_{i+1} + R\,Q_{i+1}|Q_{i+1}|,
+\end{align}
+where $B=a/(gA)$ (s/m$^2$) is the pipe's characteristic impedance and
+$R=f\,\Delta x/(2gDA^2)$ (s$^2$/m$^5$) its friction coefficient per reach.
+Solving the pair gives, at each interior node,
+$H_P=(C_P+C_M)/2$ and $Q_P=(C_P-C_M)/(2B)$.
+
+\paragraph{Ends of the pipe.} At the reflection point the head is fixed,
+$H_P=H_R$, so the $C^-$ equation gives $Q_P=(H_R-C_M)/B$. At the valve, the
+$C^+$ equation and the orifice law (Equation~\ref{eq:orifice}) together give a
+quadratic in $Q_P$, whose positive root is
+\begin{equation}
+  Q_P = \tfrac{1}{2}\left(-kB + \sqrt{k^2B^2 + 4k\,C_P}\right),
+  \qquad k = \frac{(\tau Q_0)^2}{H_{v0}}\ \ (\text{m}^5/\text{s}^2),
+\end{equation}
+with $Q_P=0$ once the valve is shut. The open fraction falls at a steady rate,
+$\tau=1-t/t_v$. The simulation starts from steady flow, with the head falling
+linearly from $H_R$ at the reflection point to $H_{v0}=H_R-h_f$ at the valve,
+and runs until six periods of $2L/a$ after the valve has shut. The tests check
+that it reproduces Joukowsky's surge for an instantaneous closure (within 3\%)
+and the rigid-column result of Equation~\ref{eq:rigid} for slow closures
+(within 5\%).
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{closure_time.pdf}
+  \caption{Peak surge as a fraction of Joukowsky's $\rho a v$, against the
+  valve's closure time measured in units of the critical time $2L/a$. The dashed
+  line is Equations~\ref{eq:joukowsky} and~\ref{eq:michaud}. The solid lines
+  are the simulation with an orifice valve whose opening falls at a steady
+  rate.}
+  \label{fig:closure}
+\end{figure}
+
+Figure~\ref{fig:closure} shows the outcome. Below $t_v\approx T_c$ every closure
+gives the full Joukowsky surge. Above it the surge falls roughly as $1/t_v$. The
+simulated curve can lie above or below Michaud's line, depending on how hard the
+orifice throttles the flow compared with the rest pressure.\sidenote{Allievi's
+constant, $a\,v/(2gH_{v0})$ (dimensionless), measures this: the ratio of the
+Joukowsky head rise to twice the head at the valve. In the two examples it is
+about 4 for copper and 1 for PE-X.} The model therefore takes the
+\emph{larger} of the formula and the simulation as the design surge, written
+$\Delta p_d$ (Pa).
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{trace.pdf}
+  \caption{Pressure at the valve after it starts to close. Each spike is the
+  wave returning from the reflection point, at intervals of $4L/a$. Friction
+  damps the oscillation only slowly.}
+  \label{fig:trace}
+\end{figure}
+
+\section{Column separation}
+
+Each high-pressure wave is followed by a low-pressure one of about the same size
+(Figure~\ref{fig:trace}). If the absolute pressure anywhere falls to the water's
+\emph{vapour pressure} $p_{vap}$ (Pa), the pressure at which water boils at its
+current temperature, the column breaks and a vapour cavity forms. When the
+columns rejoin, the impact can exceed Joukowsky's surge.\sidecite[ch.~8]{wylie1993}
+The model detects this but does not simulate it: any minimum pressure below
+$p_{vap}$ counts as a failure.\sidenote{At 55\degC{}, $p_{vap}=0.16$\,bar
+absolute, or $-0.85$\,bar gauge. With a rest pressure of 3\,bar the column
+separates once the surge exceeds about 3.9\,bar.}
+
+\section{Gas-cushion arresters}
+
+A water hammer arrester puts a volume of gas, kept apart from the water by a
+piston or membrane, next to the valve. To a first approximation it must absorb
+the kinetic energy of the moving column, $\tfrac12\rho A L v^2$ (J), while the
+pressure rises by no more than an allowed amount $\Delta p_a$ (Pa). Let $p_0$
+(Pa, absolute) be the gas's precharge pressure and $V_0$ (m$^3$) its volume at
+that pressure, and suppose the gas is compressed polytropically, so that
+$p V^n$ stays constant with index $n$ (dimensionless; $n=1$ for slow,
+isothermal compression and $n=1.4$ for fast, adiabatic compression of air or
+nitrogen). The work done on the gas in compressing it from $p_0$ to
+$p_0+\Delta p_a$ then equals the kinetic energy:
+\begin{equation}
+  \tfrac12 \rho A L v^2 = \frac{p_0 V_0}{n-1}\left[\left(\frac{p_0+\Delta p_a}{p_0}\right)^{(n-1)/n} - 1\right],
+  \label{eq:arrester}
+\end{equation}
+which tends to $p_0V_0\ln\!\left[(p_0+\Delta p_a)/p_0\right]$ as $n\to1$.
+Solving for $V_0$ gives the precharge volume. The model takes $n=1.4$, which
+needs more gas than $n=1$, and sets $p_0$ to the rest pressure plus
+atmospheric pressure. It ignores the energy taken up by the stretching pipe and
+the compressed water, which makes the estimate conservative. The result shows
+the scale needed; the product itself should be chosen from the manufacturer's
+data, or by PDI-WH~201 in US practice.\sidecite{pdiwh201}
+
+\section{Acceptance limits}
+\label{sec:limits}
+
+\begin{table*}
+  \small
+  \begin{tabular}{@{}p{0.23\linewidth}p{0.25\linewidth}p{0.44\linewidth}@{}}
+    \toprule
+    Check & Default & Source \\
+    \midrule
+    Surge above rest pressure, $\Delta p_d$ & at most 2\,bar & Technical rules for drinking water installations (EN 806-2 with DIN 1988-200), as quoted in VDI 6006, \S4.3 \\
+    Peak pressure, $p_s+\Delta p_d$ & at most the pipe and fitting rating at the water temperature (10\,bar by default) & Water Supply (Water Fittings) Regulations 1999, Schedule~2, paragraphs 3, 5 and 12 \\
+    Minimum pressure & above $p_{vap}$ & Column separation \\
+    Velocity, $v$ (advisory) & at most 1.5\,m/s for hot water & Uniform Plumbing Code 610.12; DIN 1988-300 allows 2\,m/s in single connection pipes \\
+    \bottomrule
+  \end{tabular}
+  \caption{The checks the model applies. Failing any of the first three means
+  mitigation is required. Every limit is an input to the model.}
+  \label{tab:limits}
+\end{table*}
+
+UK and European practice sets a performance requirement: keep the pressure rise
+caused by operating a valve within 2\,bar \citep{en806,din1988,vdi6006}. The UK
+Water Fittings Regulations also require fittings to resist pressure surges and
+to withstand 1.5 times the maximum pressure they are designed to operate at
+\citep{wsr1999}. US codes are prescriptive instead: the International Plumbing
+Code and the Uniform Plumbing Code require an arrester certified to ASSE~1010
+wherever quick-closing valves are used \citep{ipc,upc,asse1010}.
+Table~\ref{tab:limits} lists the checks.
+
+When mitigation is needed the model offers three remedies. The first is an
+arrester at the valve, sized by Equation~\ref{eq:arrester} with
+$\Delta p_a$ the smaller of the surge limit and the margin below the pipe
+rating. The second is the shortest effective closure time that meets the
+limit. The Python model finds it by bisection on the larger of Michaud's
+formula and the simulation; the Excel workbook gives Michaud's estimate,
+$t_v=2\rho Lv/\Delta p_a$. The third is the largest flow at which even an
+instantaneous closure passes, from Equation~\ref{eq:joukowsky}:
+$v\le\Delta p_a/(\rho a)$.
+
+\section{Worked example}
+
+A solenoid valve, such as a dishwasher's or a digital shower's, shuts in an
+effective $t_v=20$\,ms at the end of $L=8$\,m of copper pipe, 10\,mm outside
+diameter with a 0.6\,mm wall. The flow is 6\lpm{} of water at 55\degC{}, and
+the rest pressure is 3\,bar.
+
+\begin{fullwidth}
+\small
+\begin{tabular}{@{}lll@{}}
+  \toprule
+  Quantity & Working & Result \\
+  \midrule
+  Bore and area & $D=10-2\times0.6=8.8$\,mm; $A=\pi D^2/4$ & $6.08\times10^{-5}$\,m$^2$ \\
+  Velocity & $v=Q/A=(6/60\,000)/A$ & 1.64\,m/s \\
+  Water at 55\degC{} & $\rho=985.6$\,kg/m$^3$, $c=1546.8$\,m/s, $K=\rho c^2$ & 2.36\,GPa \\
+  Copper at 55\degC{} & $E=115.9$\,GPa, $\nu=0.34$ & \\
+  Restraint factor (anchored) & $2(0.6/8.8)(1.34)+8.8(1-0.34^2)/9.4$ & $\psi=1.011$ \\
+  Pipe term & $\psi K D/(E e)=1.011\times2.36\times8.8/(115.9\times0.6)$ & 0.302 \\
+  Wave speed & $a=\sqrt{K/\rho}\,/\sqrt{1+0.302}=1546.8/1.141$ & 1356\,m/s \\
+  Critical time & $T_c=2L/a=16/1356$ & 11.8\,ms ($<t_v$, slow) \\
+  Joukowsky & $\rho a v$ & 22.0\,bar \\
+  Michaud & $2\rho L v/t_v$ & 13.0\,bar \\
+  Simulation & method of characteristics, $N=20$ reaches & 15.8\,bar \\
+  Design surge $\Delta p_d$ & larger of Michaud and simulation & \textcolor{accent}{15.8\,bar $\gg$ 2\,bar} \\
+  Arrester volume & $\tfrac12\rho ALv^2=0.65$\,J; $p_0=4.01$\,bar abs.; $n=1.4$ & $V_0\approx5$\,ml \\
+  Slower valve & closure time giving a 2\,bar surge & $t_v\ge0.13$\,s \\
+  Lower flow & $v\le\Delta p_a/(\rho a)$ & $Q\le0.55$\lpm{} \\
+  \bottomrule
+\end{tabular}
+\end{fullwidth}
+
+The design surge is far above the 2\,bar limit, so mitigation is required.
+The peak pressure, $3+15.8=18.8$\,bar, also exceeds the pipe rating, and the
+low-pressure wave that follows would break the column. Here an arrester at the
+appliance's valve is the practical answer.
+
+\begin{figure*}
+  \includegraphics[width=\linewidth]{screening.pdf}
+  \caption{Screening results from the model for two common small-bore pipes.
+  Each line is the longest run, from valve to reflection point, that needs no
+  mitigation, at 3\,bar and 55\degC{}. The full table, for six pipes, is in
+  \texttt{results/waterhammer/screening.csv}.}
+  \label{fig:screening}
+\end{figure*}
+
+\section{What the screening shows}
+
+Figure~\ref{fig:screening} applies the model across the project's design range.
+Solenoid valves on small-bore pipe exceed the limit at almost any length once
+the flow passes 2 to 3\lpm{}. Lever mixers and quarter-turn taps are acceptable
+on short runs but fail on long small-bore ones. Reducing the bore to cut the
+volume of a dead leg raises the velocity, and so the surge. The two design aims
+pull against each other, and this model is the check on that trade-off.
+
+\section{Limitations}
+
+\begin{itemize}
+  \item \textbf{One pipe, one valve.} Local losses at fittings, branches and
+    unsteady friction are left out. A branched network needs a full transient
+    analysis.\sidecite{chaudhry2014}
+  \item \textbf{Closure times.} The valve closure times are engineering
+    estimates. Where a result is marginal, the valve should be measured.
+  \item \textbf{Plastic moduli.} These are indicative, and multilayer pipe is
+    treated as a single homogenised wall.
+  \item \textbf{Column separation} is detected, not simulated.
+  \item \textbf{Softening.} Trapped air and flexible connections soften real
+    surges, so the results lean conservative.
+\end{itemize}
+
+\section*{Symbols}
+
+{\footnotesize
+\begin{tabular}{@{}lll@{}}
+\toprule
+Symbol & Meaning & Unit \\
+\midrule
+$A$ & bore cross-sectional area & m$^2$ \\
+$a$ & wave speed & m/s \\
+$B$ & characteristic impedance, $a/(gA)$ & s/m$^2$ \\
+$c$ & speed of sound in water & m/s \\
+$C_P$, $C_M$ & characteristic constants & m \\
+$D$ & bore (inside diameter) & m \\
+$E$ & Young's modulus of the wall & Pa \\
+$e$ & wall thickness & m \\
+$f$ & Darcy friction factor & -- \\
+$g$ & acceleration due to gravity & m/s$^2$ \\
+$H$, $H_R$, $H_v$ & pressure head; at reflection point; at valve & m \\
+$h_f$ & friction head over the pipe & m \\
+$K$ & bulk modulus of water & Pa \\
+$k$ & valve coefficient, $(\tau Q_0)^2/H_{v0}$ & m$^5$/s$^2$ \\
+$L$ & length, valve to reflection point & m \\
+$N$ & number of reaches & -- \\
+$n$ & polytropic index of the gas & -- \\
+$p_s$ & rest pressure (gauge) & Pa \\
+$p_0$ & arrester precharge (absolute) & Pa \\
+$p_{vap}$ & vapour pressure & Pa \\
+$Q$, $Q_0$ & flow rate; steady flow & m$^3$/s \\
+$R$ & friction coefficient per reach & s$^2$/m$^5$ \\
+$Re$ & Reynolds number & -- \\
+$T_c$ & critical time, $2L/a$ & s \\
+$t$, $t_v$ & time; effective closure time & s \\
+$V_0$ & arrester precharge volume & m$^3$ \\
+$v$ & mean velocity & m/s \\
+$x$ & distance from the reflection point & m \\
+$\Delta p$, $\Delta p_d$, $\Delta p_a$ & surge; design surge; allowed rise & Pa \\
+$\Delta v$ & velocity change & m/s \\
+$\varepsilon$ & bore roughness & m \\
+$\mu$ & dynamic viscosity & Pa\,s \\
+$\nu$ & Poisson's ratio & -- \\
+$\rho$ & water density & kg/m$^3$ \\
+$\tau$ & valve open fraction & -- \\
+$\phi$, $\psi$ & restraint terms & -- \\
+\bottomrule
+\end{tabular}
+}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\vspace{1em}
+\noindent{\footnotesize\raggedright The code, tests and data behind this note
+are in the GitHub repository \mbox{gwilma/deadleg\_deadtime}. The file
+\mbox{docs/water\_hammer.md} gives the limits and sources in brief,
+\mbox{docs/physics/figures.py} redraws every figure, and
+\mbox{excel/waterhammer.xlsx} implements the same model in a spreadsheet.\par}
+
+\end{document}
