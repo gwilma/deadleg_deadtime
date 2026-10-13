@@ -290,8 +290,10 @@ def simulate(sc: Scenario) -> Result:
             sol = X0 + X1 * Ta_new
             Tw = sol[:, 0]
             Tp = sol[:, 1:]
-            Q_pa += dx * np.sum(Go * (Tp[:, -1] - Ta_new)) * dt
-            Q_env += UA * (Ta_new - T_env) * dt
+            q_pa = dx * np.sum(Go * (Tp[:, -1] - Ta_new)) * dt
+            Q_pa += q_pa
+            # Heat to a fixed-temperature air body leaves the system for good.
+            Q_env += q_pa if air_fixed else UA * (Ta_new - T_env) * dt
             Ta = Ta_new
 
             # 3. Axial conduction along the wall.

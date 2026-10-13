@@ -1,0 +1,551 @@
+<title>Hot Water Wait</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: one reading column with a margin for notes (Tufte); the Economist style keeps the
+   grid but swaps type, colour, rules and chart furniture. Inputs sit beside the charts on wide
+   screens and above them on phones. */
+:root {
+  --bg: #fffff8; --ink: #111111; --muted: #5f5e58; --faint: #b9b7ab; --rule: #d9d6c8;
+  --line1: #111111; --line2: #8b8a83; --line3: #8b8a83; --mark: #9b2f1c; --field: #fffff8;
+  --tag: transparent;
+  --body: "EB Garamond", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --head: var(--body);
+  --num: var(--body);
+  --head-style: italic; --head-weight: 400;
+}
+:root[data-style="economist"] {
+  --bg: #ffffff; --ink: #0c0c0c; --muted: #4f5d66; --faint: #8fa3ad; --rule: #b7c6cf;
+  --line1: #006ba2; --line2: #3ebcd2; --line3: #758d99; --mark: #e3120b; --field: #ffffff;
+  --tag: #e3120b;
+  --body: "Source Sans 3", "Source Sans Pro", "Segoe UI", Calibri, Arial, sans-serif;
+  --head: var(--body); --num: var(--body);
+  --head-style: normal; --head-weight: 700;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161512; --ink: #ebe8de; --muted: #a9a69a; --faint: #6d6b62; --rule: #3a3833;
+    --line1: #ebe8de; --line2: #8f8c82; --line3: #8f8c82; --mark: #e0775e; --field: #1d1c18;
+    --tag: transparent; color-scheme: dark;
+  }
+  :root:not([data-theme="light"])[data-style="economist"] {
+    --bg: #111518; --ink: #eef2f4; --muted: #a7b5bd; --faint: #5e6f78; --rule: #33424a;
+    --line1: #4fa8dd; --line2: #63d0e2; --line3: #9aaeb8; --mark: #ff4b3e; --field: #182025;
+    --tag: #e3120b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161512; --ink: #ebe8de; --muted: #a9a69a; --faint: #6d6b62; --rule: #3a3833;
+  --line1: #ebe8de; --line2: #8f8c82; --line3: #8f8c82; --mark: #e0775e; --field: #1d1c18;
+  --tag: transparent; color-scheme: dark;
+}
+:root[data-theme="dark"][data-style="economist"] {
+  --bg: #111518; --ink: #eef2f4; --muted: #a7b5bd; --faint: #5e6f78; --rule: #33424a;
+  --line1: #4fa8dd; --line2: #63d0e2; --line3: #9aaeb8; --mark: #ff4b3e; --field: #182025;
+  --tag: #e3120b; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; }
+[data-style="economist"] body { font-size: 16px; }
+.page { max-width: 1180px; margin: 0 auto; padding-inline: 24px; padding-block: 28px 64px; }
+@media (max-width: 600px) { .page { padding-inline: 16px; } }
+
+/* masthead */
+.mast { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px;
+  position: relative; padding-top: 6px; }
+[data-style="economist"] .mast { border-top: 4px solid var(--tag); padding-top: 22px; }
+[data-style="economist"] .mast::before { content: ""; position: absolute; left: 0; top: 0; width: 44px; height: 14px;
+  background: var(--tag); }
+h1 { font-family: var(--head); font-style: var(--head-style); font-weight: var(--head-weight); font-size: 2.4rem;
+  line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -0.005em; }
+[data-style="economist"] h1 { font-size: 2.1rem; letter-spacing: -0.01em; }
+.dek { margin: 6px 0 0; color: var(--muted); font-size: 1.12rem; max-width: 62ch; }
+[data-style="economist"] .dek { font-size: 1.05rem; }
+
+.style-switch { display: inline-flex; border: 1px solid var(--rule); border-radius: 2px; overflow: hidden; }
+.style-switch button { font: inherit; font-size: 0.86rem; background: transparent; color: var(--muted); border: 0;
+  padding: 5px 12px; cursor: pointer; letter-spacing: 0.02em; }
+.style-switch button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.style-switch button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--mark); outline-offset: 1px; }
+.switch-label { font-size: 0.8rem; color: var(--muted); margin-right: 8px; letter-spacing: 0.04em; }
+
+/* main grid */
+.grid { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 28px 44px; margin-top: 30px; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+form { display: grid; gap: 18px; align-content: start; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+legend { font-family: var(--head); font-style: var(--head-style); font-size: 1.05rem; margin-bottom: 4px; padding: 0; }
+[data-style="economist"] legend { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 92px; align-items: center; gap: 10px; }
+.row label { font-size: 0.93rem; color: var(--ink); }
+.row .unit { color: var(--muted); font-size: 0.82rem; }
+input, select { font: inherit; font-size: 0.93rem; color: var(--ink); background: var(--field); border: 0;
+  border-bottom: 1px solid var(--faint); padding: 3px 2px; width: 100%; font-variant-numeric: tabular-nums; border-radius: 0; }
+[data-style="economist"] input, [data-style="economist"] select { border: 1px solid var(--rule); padding: 4px 6px; }
+input[type="range"] { border: 0; padding: 0; accent-color: var(--line1); }
+.full { grid-template-columns: minmax(0, 1fr); }
+.hint { font-size: 0.8rem; color: var(--muted); margin: 0; }
+
+/* figures */
+figure { margin: 0; min-width: 0; }
+figure + figure { margin-top: 34px; }
+.fig-title { font-family: var(--head); font-style: var(--head-style); font-size: 1.25rem; margin: 0 0 2px; font-weight: 400; }
+[data-style="economist"] .fig-title { font-style: normal; font-weight: 700; font-size: 1.1rem; }
+.fig-sub { color: var(--muted); font-size: 0.92rem; margin: 0 0 6px; }
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { font-family: var(--num); fill: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+svg.chart .lbl { fill: var(--ink); font-size: 14px; }
+svg.chart .lbl-mark { fill: var(--mark); }
+svg.chart .axis { stroke: var(--ink); stroke-width: 0.8; fill: none; }
+svg.chart .grid { stroke: var(--rule); stroke-width: 1; fill: none; }
+svg.chart .base { stroke: var(--ink); stroke-width: 1.2; fill: none; }
+svg.chart .s1 { stroke: var(--line1); fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+svg.chart .s2 { stroke: var(--line2); fill: none; stroke-width: 1.3; stroke-dasharray: 5 4; }
+svg.chart .s3 { stroke: var(--line3); fill: none; stroke-width: 1.3; }
+svg.chart .dot { fill: var(--mark); stroke: var(--bg); stroke-width: 1.5; }
+svg.chart .cur { stroke: var(--faint); stroke-width: 1; stroke-dasharray: 2 3; }
+svg.chart .s4 { stroke: var(--line2); fill: none; stroke-width: 1.6; }
+svg.chart .sw1 { stroke: var(--line1); } svg.chart .sw2 { stroke: var(--line2); } svg.chart .sw3 { stroke: var(--line3); }
+figcaption, .source { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+[data-style="tufte"] figcaption, :root:not([data-style]) figcaption { font-style: italic; }
+
+/* numbers */
+.numbers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 28px; margin: 28px 0 6px; }
+.num { display: grid; gap: 1px; min-width: 0; }
+.num .k { font-size: 0.85rem; color: var(--muted); }
+.num .v { font-size: 1.7rem; line-height: 1.15; font-variant-numeric: tabular-nums lining-nums; }
+.num .v small { font-size: 0.9rem; color: var(--muted); margin-left: 3px; }
+[data-style="economist"] .num { border-top: 1px solid var(--rule); padding-top: 6px; }
+[data-style="economist"] .num .v { font-weight: 700; font-size: 1.55rem; }
+.num.key .v { color: var(--mark); }
+
+/* prose */
+.prose { margin-top: 48px; }
+.prose p, .prose h2 { max-width: 66ch; }
+.prose h2 { font-family: var(--head); font-style: var(--head-style); font-weight: var(--head-weight); font-size: 1.45rem; margin: 30px 0 6px; }
+[data-style="economist"] .prose h2 { font-size: 1.2rem; }
+.prose p { margin: 0 0 12px; }
+.tbl-wrap { overflow-x: auto; margin: 10px 0 6px; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; min-width: 560px; }
+th, td { padding: 4px 12px 4px 0; text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-weight: 400; color: var(--muted); border-bottom: 1px solid var(--ink); }
+[data-style="economist"] thead th { font-weight: 600; border-bottom: 2px solid var(--ink); }
+tbody tr:last-child td { border-bottom: 1px solid var(--ink); }
+[data-style="economist"] tbody td { border-bottom: 1px solid var(--rule); }
+.mono { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+  <header class="mast">
+    <div>
+      <h1>How long until the hot water arrives?</h1>
+      <p class="dek">Hot water pushed into a cold pipe: the water, the pipe wall and the air around it, all warming at once.</p>
+    </div>
+    <div><span class="switch-label">Style</span><span class="style-switch" role="group" aria-label="Chart and text style">
+      <button type="button" id="st-tufte" data-set-style="tufte" aria-pressed="true">Tufte</button>
+      <button type="button" id="st-econ" data-set-style="economist" aria-pressed="false">The Economist</button>
+    </span></div>
+  </header>
+
+  <div class="grid">
+    <form id="inputs" autocomplete="off">
+      <fieldset>
+        <legend>Pipe</legend>
+        <div class="row full"><select id="pipe" aria-label="Pipe"></select></div>
+        <div id="custom-pipe" hidden>
+          <div class="row"><label for="od">Outside diameter <span class="unit">mm</span></label><input id="od" type="number" step="0.1" min="4" max="40" value="12"></div>
+          <div class="row"><label for="wall">Wall <span class="unit">mm</span></label><input id="wall" type="number" step="0.1" min="0.2" max="6" value="1.5"></div>
+          <div class="row"><label for="mat">Material</label><select id="mat"></select></div>
+        </div>
+        <div class="row"><label for="len">Length <span class="unit">m</span></label><input id="len" type="number" step="0.5" min="0.5" max="60" value="5"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Draw-off</legend>
+        <div class="row"><label for="flow">Flow <span class="unit">l/min</span></label><input id="flow" type="number" step="0.1" min="0.3" max="15" value="3"></div>
+        <input id="flow-range" type="range" min="1" max="6" step="0.1" value="3" aria-label="Flow, litres per minute">
+        <div class="row"><label for="tin">Hot supply <span class="unit">°C</span></label><input id="tin" type="number" step="1" min="25" max="90" value="55"></div>
+        <div class="row"><label for="t0">Pipe and air at start <span class="unit">°C</span></label><input id="t0" type="number" step="1" min="0" max="40" value="20"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Air around the pipe</legend>
+        <div class="row full"><select id="air" aria-label="Air body">
+          <option value="0.01">Boxed in, 100 × 100 mm void</option>
+          <option value="0.45">Enclosed, 1.5 m × 0.3 m</option>
+          <option value="inf">Open room (air stays at start temperature)</option>
+          <option value="custom">Custom cross-section</option>
+        </select></div>
+        <div class="row" id="air-custom-row" hidden><label for="air-area">Air cross-section <span class="unit">m²</span></label><input id="air-area" type="number" step="0.01" min="0.001" value="0.05"></div>
+        <div class="row"><label for="ua">Air loss to outside <span class="unit">W/K</span></label><input id="ua" type="number" step="0.5" min="0" value="0"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Run</legend>
+        <div class="row"><label for="dur">Time shown <span class="unit">s</span></label><input id="dur" type="number" step="5" min="5" placeholder="auto"></div>
+        <p class="hint">Leave blank to show about four times the front's arrival time.</p>
+      </fieldset>
+    </form>
+
+    <main>
+      <figure>
+        <p class="fig-title" id="f1-title">Temperature at the tap</p>
+        <p class="fig-sub" id="f1-sub"></p>
+        <svg class="chart" id="chart1" viewBox="0 0 680 360" role="img" aria-labelledby="f1-title f1-sub"></svg>
+        <figcaption id="f1-cap"></figcaption>
+      </figure>
+
+      <div class="numbers" id="numbers" aria-live="polite"></div>
+
+      <figure>
+        <p class="fig-title" id="f2-title">Wait against flow rate</p>
+        <p class="fig-sub" id="f2-sub">Seconds until the tap reaches each temperature, same pipe, 1 to 6 l/min</p>
+        <svg class="chart" id="chart2" viewBox="0 0 680 320" role="img" aria-labelledby="f2-title f2-sub"></svg>
+        <figcaption id="f2-cap">The dotted line is the plug-flow time, the volume of the pipe divided by the flow. Computed on the coarse grid the spreadsheet uses (40 cells, 5 wall layers), which is within 0.1 s of the full model.</figcaption>
+      </figure>
+    </main>
+  </div>
+
+  <article class="prose">
+    <h2>What the model does</h2>
+    <p>When the tap opens, hot water displaces the cold water in the pipe as a plug. The leading hot water gives up heat to the cold wall, so the front that reaches the tap is cooler than the supply and arrives later than the plug-flow time. The model follows that exchange in each short length of pipe: forced convection from the water to the inside of the wall, conduction through the wall in thin layers, and natural convection plus radiation from the outside of the wall to one well-mixed body of air, which warms in turn.</p>
+    <p>Copper is thin and conducts so well that it acts as a single heat store; the front is delayed by about the ratio of wall to water heat capacity, the σ above. Plastic conducts about a thousand times worse, so only a thin inner skin warms during a draw. Warm water reaches the tap close to the plug-flow time, but the last few degrees wait on heat soaking into the wall.</p>
+    <p>Water properties vary with temperature; the film coefficients use the Gnielinski correlation inside (blended to laminar flow below a Reynolds number of 10,000) and Churchill–Chu natural convection plus linearised radiation outside. The derivation, with every term defined, is in the project’s physics paper.</p>
+
+    <h2>The same answers three ways</h2>
+    <p>This page runs a JavaScript port of the Python model. The Excel workbook does the same calculation in live cell formulas on a 40-cell, 5-layer grid. Run on that grid, all three agree to within a millionth of a degree at every step; the times below are to 45 °C.</p>
+    <div class="tbl-wrap"><table id="xcheck">
+      <thead><tr><th>Case</th><th>Python (s)</th><th>Web page (s)</th><th>Excel (s)</th><th>Largest outlet difference, Excel vs Python (K)</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="source">The full Python model (200 cells, 6 layers, axial wall conduction) gives delivery times within 0.1 s of the coarse grid for these cases.</p>
+  </article>
+</div>
+
+<script>
+/*DEADLEG_JS*/
+</script>
+<script>
+(function () {
+  "use strict";
+  const D = window.Deadleg;
+  const XCHECK = /*XCHECK_JSON*/;
+  const $ = (id) => document.getElementById(id);
+  const root = document.documentElement;
+  const THRESH = [40, 45, 50];
+
+  // ---------- style switch ----------
+  function setStyle(s, save) {
+    root.setAttribute("data-style", s);
+    for (const b of document.querySelectorAll("[data-set-style]")) b.setAttribute("aria-pressed", String(b.dataset.setStyle === s));
+    if (save) { try { localStorage.setItem("deadleg-style", s); } catch (e) { /* storage unavailable */ } }
+    redraw();
+  }
+  const isEcon = () => root.getAttribute("data-style") === "economist";
+
+  // ---------- inputs ----------
+  const pipeSel = $("pipe");
+  for (const [k, p] of Object.entries(D.PRESETS)) pipeSel.add(new Option(p.name + " mm", k));
+  pipeSel.add(new Option("Custom size and material", "custom"));
+  pipeSel.value = "copper_10x0.6";
+  for (const [k, m] of Object.entries(D.MATERIALS)) $("mat").add(new Option(m.name, k));
+  $("mat").value = "pex";
+
+  function readInputs() {
+    const custom = pipeSel.value === "custom";
+    $("custom-pipe").hidden = !custom;
+    const airV = $("air").value;
+    $("air-custom-row").hidden = airV !== "custom";
+    const num = (id, d) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : d; };
+    const pipe = custom ? { name: "Custom " + num("od", 12) + " × " + num("wall", 1.5), od: num("od", 12) / 1000,
+      wall: Math.min(num("wall", 1.5), num("od", 12) / 2 - 0.5) / 1000, material: $("mat").value } : pipeSel.value;
+    const airArea = airV === "inf" ? Infinity : airV === "custom" ? Math.max(1e-4, num("air-area", 0.05)) : parseFloat(airV);
+    const s = { pipe, length: Math.max(0.5, num("len", 5)), flow: Math.max(0.2, num("flow", 3)),
+      T0: num("t0", 20), Tin: num("tin", 55), airArea, airUA: Math.max(0, num("ua", 0)) };
+    s.Tenv = s.T0;
+    const dur = parseFloat($("dur").value);
+    s.auto = !Number.isFinite(dur);
+    s.duration = s.auto ? autoDuration(s) : Math.max(5, dur);
+    return s;
+  }
+  function geometry(s) {
+    const P = D.pipeGeometry(typeof s.pipe === "string" ? D.PRESETS[s.pipe] : s.pipe);
+    const Tm = 0.5 * (s.T0 + s.Tin);
+    const sigma = P.mat.rho * P.mat.cp * P.Ap / (D.water.density(Tm) * D.water.cp(Tm) * P.Ai);
+    const vol = P.Ai * s.length * 1000;
+    return { P, sigma, vol, tplug: vol / s.flow * 60 };
+  }
+  function autoDuration(s) {
+    const g = geometry(s);
+    const slow = g.P.mat.k < 5 ? 5.5 : 3.5;
+    return Math.min(1200, Math.max(20, slow * (1 + g.sigma) * g.tplug));
+  }
+
+  // ---------- chart helpers ----------
+  const NS = "http://www.w3.org/2000/svg";
+  function el(parent, tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  }
+  function niceTicks(lo, hi, n, cover = true) {
+    const span = hi - lo, raw = span / Math.max(1, n);
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= n) || 10 * mag;
+    const out = [];
+    for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(10));
+    if (cover && out[out.length - 1] < hi - 1e-9) out.push(+(out[out.length - 1] + step).toFixed(10));
+    return out;
+  }
+  const fmt = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : "–");
+
+  /**
+   * spec: {W, H, x:[lo,hi], y:[lo,hi], xTicks, yTicks, xTitle, yUnit,
+   *        series:[{xs, ys, cls, label, legend}], dots:[{x,y,label}], vline}
+   */
+  function drawChart(svg, spec) {
+    svg.textContent = "";
+    const econ = isEcon();
+    // draw at the on-screen width so text stays readable on a phone
+    const W = Math.round(Math.max(340, Math.min(spec.W, svg.getBoundingClientRect().width || spec.W)));
+    const H = Math.round(spec.H * (W < 520 ? 0.9 : 1));
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    const m = econ ? { l: 8, r: 44, t: 46, b: 44 } : { l: 48, r: 86, t: 14, b: 46 };
+    const X = (v) => m.l + (v - spec.x[0]) / (spec.x[1] - spec.x[0]) * (W - m.l - m.r);
+    const Y = (v) => H - m.b - (v - spec.y[0]) / (spec.y[1] - spec.y[0]) * (H - m.t - m.b);
+    const g = el(svg, "g", {});
+
+    if (econ) {
+      // legend across the top, horizontal gridlines, values on the right, solid baseline
+      let lx = m.l;
+      for (const s of spec.series.filter((s) => s.legend !== false)) {
+        el(g, "line", { x1: lx, x2: lx + 22, y1: 14, y2: 14, class: s.cls + " sw" + s.cls.slice(1) });
+        const t = el(g, "text", { x: lx + 28, y: 18, class: "lbl" }, s.label);
+        lx += 40 + s.label.length * 7.2;
+      }
+      for (const v of spec.yTicks) {
+        const y = Y(v);
+        el(g, "line", { x1: m.l, x2: W - m.r + 36, y1: y, y2: y, class: v === spec.yTicks[0] ? "base" : "grid" });
+        el(g, "text", { x: W - 2, y: y - 4, "text-anchor": "end" }, String(v));
+      }
+      el(g, "text", { x: m.l, y: Y(spec.yTicks[spec.yTicks.length - 1]) - 6 }, spec.yUnit);
+      for (const v of spec.xTicks) {
+        el(g, "line", { x1: X(v), x2: X(v), y1: H - m.b, y2: H - m.b + 5, class: "axis" });
+        el(g, "text", { x: X(v), y: H - m.b + 19, "text-anchor": "middle" }, String(v));
+      }
+      el(g, "text", { x: m.l, y: H - 6 }, spec.xTitle);
+    } else {
+      // range frame: axes span only the data, light ticks, no grid
+      const yLo = spec.yFrame ? spec.yFrame[0] : spec.y[0], yHi = spec.yFrame ? spec.yFrame[1] : spec.y[1];
+      el(g, "line", { x1: m.l - 8, x2: m.l - 8, y1: Y(yLo), y2: Y(yHi), class: "axis" });
+      for (const v of spec.yTicks) {
+        el(g, "line", { x1: m.l - 12, x2: m.l - 8, y1: Y(v), y2: Y(v), class: "axis" });
+        el(g, "text", { x: m.l - 16, y: Y(v) + 4, "text-anchor": "end" }, String(v));
+      }
+      el(g, "text", { x: m.l - 16, y: Y(yHi) - 10, "text-anchor": "end" }, spec.yUnit);
+      const xLo = spec.xFrame ? spec.xFrame[0] : spec.x[0], xHi = spec.xFrame ? spec.xFrame[1] : spec.x[1];
+      el(g, "line", { x1: X(xLo), x2: X(xHi), y1: H - m.b + 8, y2: H - m.b + 8, class: "axis" });
+      for (const v of spec.xTicks) {
+        el(g, "line", { x1: X(v), x2: X(v), y1: H - m.b + 8, y2: H - m.b + 12, class: "axis" });
+        el(g, "text", { x: X(v), y: H - m.b + 27, "text-anchor": "middle" }, String(v));
+      }
+      el(g, "text", { x: X(xHi), y: H - 4, "text-anchor": "end" }, spec.xTitle);
+    }
+
+    if (spec.vline != null) el(g, "line", { x1: X(spec.vline), x2: X(spec.vline), y1: Y(spec.y[0]), y2: Y(spec.y[1]), class: "cur" });
+
+    const ends = [];
+    for (const s of spec.series) {
+      let d = "";
+      for (let i = 0; i < s.xs.length; i++) {
+        if (!Number.isFinite(s.ys[i])) continue;
+        d += (d ? "L" : "M") + X(s.xs[i]).toFixed(1) + " " + Y(Math.max(spec.y[0], Math.min(spec.y[1], s.ys[i]))).toFixed(1);
+      }
+      if (d) el(g, "path", { d, class: s.cls });
+      if (!econ && s.direct !== false) {
+        let k = s.ys.length - 1;
+        while (k > 0 && !Number.isFinite(s.ys[k])) k--;
+        if (Number.isFinite(s.ys[k])) ends.push({ y: Y(s.ys[k]), x: X(s.xs[k]), label: s.label, mark: s.mark });
+      }
+    }
+    // Tufte: label each line at its end, nudged apart so labels never collide
+    ends.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 15) ends[i].y = ends[i - 1].y + 15;
+    for (const e of ends) el(g, "text", { x: e.x + 6, y: e.y + 4, class: "lbl" + (e.mark ? " lbl-mark" : "") }, e.label);
+
+    for (const dt of spec.dots || []) {
+      if (!Number.isFinite(dt.x)) continue;
+      el(g, "circle", { cx: X(dt.x), cy: Y(dt.y), r: 3.4, class: "dot" });
+      if (dt.label) el(g, "text", { x: X(dt.x) + (dt.dx ?? 8), y: Y(dt.y) + (dt.dy ?? 4), "text-anchor": dt.anchor || "start",
+        class: "lbl lbl-mark" }, dt.label);
+    }
+  }
+
+  // ---------- model runs ----------
+  let last = null, sweep = null, sweepToken = 0;
+
+  function run() {
+    const s = readInputs();
+    const g = geometry(s);
+    const r = D.simulate({ ...s });
+    last = { s, g, r };
+    drawMain();
+    drawNumbers();
+    startSweep(s, g);
+  }
+
+  function drawMain() {
+    if (!last) return;
+    const { s, g, r } = last;
+    const econ = isEcon();
+    const tmax = r.t[r.t.length - 1] + r.dt / 2;
+    const lo = Math.min(s.T0, ...r.Tair), hi = Math.max(s.Tin, ...r.Tout);
+    const yTicks = niceTicks(Math.floor((lo + 0.05) / 10) * 10, Math.ceil((hi - 0.05) / 10) * 10, 5);
+    const xTicks = niceTicks(0, tmax, econ ? 6 : 5, false);
+    const times = THRESH.map((T) => r.timeToReach(T));
+    const t = [0, ...r.t, tmax];
+    const out = [s.T0, ...r.Tout, r.Tout[r.Tout.length - 1]];
+    const airT = [s.T0, ...r.Tair, r.Tair[r.Tair.length - 1]];
+    const airLabel = Number.isFinite(s.airArea) ? "Air" : "Air (held)";
+    drawChart($("chart1"), {
+      W: 680, H: 360, x: [0, tmax], y: [yTicks[0], yTicks[yTicks.length - 1]], xTicks, yTicks,
+      xTitle: "seconds after the tap opens", yUnit: "°C",
+      series: [
+        { xs: [0, tmax], ys: [s.Tin, s.Tin], cls: "s2", label: "Supply " + fmt(s.Tin, 0) + "°" , legend: true },
+        { xs: t, ys: airT, cls: "s3", label: airLabel },
+        { xs: t, ys: out, cls: "s1", label: "Tap" },
+      ],
+      dots: THRESH.map((T, i) => ({ x: times[i], y: T, label: fmt(T, 0) + "° " + fmt(times[i]) + " s", dx: 8, dy: i === 0 ? 10 : 4 })),
+    });
+    const pipeName = typeof s.pipe === "string" ? D.PRESETS[s.pipe].name : s.pipe.name;
+    $("f1-sub").textContent = pipeName + " mm, " + s.length + " m, " + fmt(s.flow) + " l/min; supply " + fmt(s.Tin, 0) +
+      " °C into pipe and air at " + fmt(s.T0, 0) + " °C";
+    $("f1-cap").textContent = econ
+      ? "Dots mark when the tap first reaches 40, 45 and 50 °C. Source: deadleg model, 200 cells × 6 wall layers."
+      : "Dots mark the moments the tap first reaches 40, 45 and 50 °C. The supply line is dashed; the air line shows the body of air around the pipe warming.";
+  }
+
+  function drawNumbers() {
+    if (!last) return;
+    const { s, g, r } = last;
+    const t50 = r.timeToReach(50), t45 = r.timeToReach(45), t40 = r.timeToReach(40);
+    const v50 = r.volumeToReach(50);
+    const items = [
+      ["Water in the pipe", fmt(g.vol, 2), "l"],
+      ["Plug-flow time", fmt(g.tplug), "s"],
+      ["Wall-to-water heat capacity, σ", fmt(g.sigma, 2), ""],
+      ["Time to 40 °C", fmt(t40), "s"],
+      ["Time to 45 °C", fmt(t45), "s", true],
+      ["Time to 50 °C", fmt(t50), "s"],
+      ["Water run off before 50 °C", fmt(v50, 2), "l"],
+      ["Air warms by", fmt(r.Tair[r.Tair.length - 1] - s.T0), "K"],
+    ];
+    const box = $("numbers");
+    box.textContent = "";
+    for (const [k, v, u, key] of items) {
+      const d = document.createElement("div");
+      d.className = "num" + (key ? " key" : "");
+      const a = document.createElement("span"); a.className = "k"; a.textContent = k;
+      const b = document.createElement("span"); b.className = "v"; b.textContent = v;
+      if (u) { const sm = document.createElement("small"); sm.textContent = u; b.appendChild(sm); }
+      d.append(a, b); box.appendChild(d);
+    }
+    if (![t40, t45, t50].every(Number.isFinite) && s.auto === false) {
+      const p = document.createElement("p"); p.className = "hint";
+      p.textContent = "A dash means the tap did not reach that temperature in the time shown.";
+      box.appendChild(p);
+    }
+  }
+
+  function startSweep(s, g) {
+    const token = ++sweepToken;
+    const flows = []; for (let q = 1; q <= 6.0001; q += 0.25) flows.push(+q.toFixed(2));
+    const rows = [];
+    let i = 0;
+    function step() {
+      if (token !== sweepToken) return;
+      const t0 = performance.now();
+      while (i < flows.length && performance.now() - t0 < 30) {
+        const q = flows[i++];
+        const ss = { ...s, flow: q, nx: 40, nr: 5, axial: false };
+        ss.duration = autoDuration(ss) * 1.5;
+        const r = D.simulate(ss);
+        rows.push({ q, plug: g.vol / q * 60, t: THRESH.map((T) => r.timeToReach(T)) });
+      }
+      sweep = { rows, flow: s.flow, done: i >= flows.length };
+      drawSweep();
+      if (i < flows.length) setTimeout(step, 0);
+    }
+    setTimeout(step, 0);
+  }
+
+  function drawSweep() {
+    if (!sweep || !sweep.rows.length) return;
+    const econ = isEcon();
+    const xs = sweep.rows.map((r) => r.q);
+    const ys = THRESH.map((_, j) => sweep.rows.map((r) => r.t[j]));
+    const plug = sweep.rows.map((r) => r.plug);
+    const all = ys.flat().concat(plug).filter(Number.isFinite);
+    const yTicks = niceTicks(0, Math.max(...all) * 1.02, 5);
+    const series = [
+      { xs, ys: plug, cls: "s2", label: "Plug flow" },
+      ...THRESH.map((T, j) => ({ xs, ys: ys[j], cls: j === 1 ? "s1" : "s3", label: "To " + T + " °C", mark: false })),
+    ];
+    // in the Economist style three colours separate the thresholds; in Tufte, 45 °C is the heavy line
+    if (econ) { series[1].cls = "s3"; series[2].cls = "s1"; series[3].cls = "s4"; }
+    drawChart($("chart2"), {
+      W: 680, H: 320, x: [1, 6], y: [0, yTicks[yTicks.length - 1]], xTicks: [1, 2, 3, 4, 5, 6], yTicks,
+      yFrame: [0, yTicks[yTicks.length - 1]], xTitle: "flow, l/min", yUnit: "seconds",
+      series, vline: sweep.flow >= 1 && sweep.flow <= 6 ? sweep.flow : null,
+    });
+  }
+
+  function redraw() { drawMain(); drawNumbers(); drawSweep(); }
+  let lastW = 0;
+  window.addEventListener("resize", () => {
+    const w = $("chart1").getBoundingClientRect().width;
+    if (Math.abs(w - lastW) > 20) { lastW = w; drawMain(); drawSweep(); }
+  });
+
+  // ---------- cross-check table ----------
+  const NAMES = {
+    copper10_3lpm: "Copper 10 × 0.6, 5 m, 3 l/min",
+    pex12_1lpm: "PE-X 12 × 2.0, 5 m, 1 l/min",
+    copper12_6lpm_room: "Copper 12 × 0.6, 8 m, 6 l/min, open room",
+    mlcp12_4lpm_loss: "MLCP 12 × 1.6, 15 m, 4 l/min, 1.5 × 0.3 m air with losses",
+  };
+  const tb = document.querySelector("#xcheck tbody");
+  for (const c of XCHECK) {
+    const tr = document.createElement("tr");
+    const cells = [NAMES[c.id] || c.id, fmt(c.t45.python, 2), fmt(c.t45.js, 2), fmt(c.t45.excel, 2),
+      c.max_dTout_excel_python.toExponential(0).replace("e-", " × 10⁻").replace(/⁻(\d+)/, (m, d) => "⁻" + d.split("").map((x) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[x]).join(""))];
+    for (const v of cells) { const td = document.createElement("td"); td.textContent = v; tr.appendChild(td); }
+    tb.appendChild(tr);
+  }
+
+  // ---------- wiring ----------
+  let timer = null;
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(run, 120); };
+  $("inputs").addEventListener("input", (e) => {
+    if (e.target.id === "flow-range") $("flow").value = e.target.value;
+    if (e.target.id === "flow") { const v = parseFloat(e.target.value); if (v >= 1 && v <= 6) $("flow-range").value = v; }
+    schedule();
+  });
+  $("inputs").addEventListener("change", schedule);
+  $("inputs").addEventListener("submit", (e) => e.preventDefault());
+  for (const b of document.querySelectorAll("[data-set-style]")) b.addEventListener("click", () => setStyle(b.dataset.setStyle, true));
+
+  let initial = "tufte";
+  try { initial = localStorage.getItem("deadleg-style") || initial; } catch (e) { /* storage unavailable */ }
+  if (location.hash === "#economist") initial = "economist";
+  if (location.hash === "#tufte") initial = "tufte";
+  root.setAttribute("data-style", initial);
+  for (const b of document.querySelectorAll("[data-set-style]")) b.setAttribute("aria-pressed", String(b.dataset.setStyle === initial));
+  run();
+})();
+</script>

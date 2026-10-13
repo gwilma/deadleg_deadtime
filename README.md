@@ -134,6 +134,40 @@ is close to the supply temperature, so a degree matters a lot), and
 transitional flow (Re about 5000 to 10000) being less well mixed than the
 correlation assumes.
 
+## Web page and Excel workbook
+
+The same model also runs in a browser and in a spreadsheet:
+
+* **`web/deadleg.html`** is a single, self-contained page (open it directly; no
+  server needed). It runs `web/deadleg.js`, a line-for-line JavaScript port of
+  `deadleg/model.py`, and redraws as you change the pipe, flow, temperatures or
+  air body. A switch at the top changes the charts and text between a Tufte style
+  and an Economist style. Rebuild it with `python web/build_page.py` after
+  editing `web/template.html` or `web/deadleg.js`.
+* **`excel/deadleg.xlsx`** does the calculation in live cell formulas (no macros):
+  40 cells along the pipe, 5 wall layers, 360 time steps, with the implicit
+  water → wall → air exchange solved by a Thomas sweep laid out across sheets.
+  Change the shaded cells on `Inputs`; the two dashboard sheets show the result
+  in each style. Rebuild with `python excel/build_workbook.py`.
+
+### Cross-check
+
+`python crosscheck/compare_js_python.py` runs the JS port against Python on five
+cases at full resolution: the outlet temperatures agree to 6 × 10⁻¹⁰ K.
+`python crosscheck/compare_excel.py` sets the workbook inputs for four cases,
+recalculates it in LibreOffice, and compares it step by step with Python and JS
+run on the workbook's grid (`crosscheck/excel_vs_python.json`):
+
+| Case | Time to 45 °C, Python / JS / Excel (s) | Largest outlet difference, Excel vs Python (K) |
+|---|---|---|
+| Copper 10 × 0.6, 5 m, 3 l/min | 8.09 / 8.09 / 8.09 | 9 × 10⁻¹² |
+| PE-X 12 × 2.0, 5 m, 1 l/min | 25.09 / 25.09 / 25.09 | 2 × 10⁻¹⁰ |
+| Copper 12 × 0.6, 8 m, 6 l/min, open room | 9.08 / 9.08 / 9.08 | 1 × 10⁻⁶ |
+| MLCP 12 × 1.6, 15 m, 4 l/min, 1.5 × 0.3 m air, losses | 26.08 / 26.08 / 26.08 | 1 × 10⁻¹³ |
+
+The workbook's coarse grid gives delivery times within 0.1 s of the full Python
+model (200 cells, 6 layers, axial wall conduction) in all four cases.
+
 ## Layout
 
 ```
@@ -146,4 +180,7 @@ deadleg/io.py           JSON scenarios, CSV export, comparison with measured tra
 docs/derivation.md      equations, assumptions, numerics, verification, limitations
 examples/               parameter sweep and Ref 29 comparison
 tests/                  verification tests
+web/                    JavaScript port and the standalone page
+excel/                  workbook builder and deadleg.xlsx
+crosscheck/             Python vs JS vs Excel comparisons
 ```

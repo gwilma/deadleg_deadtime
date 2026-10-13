@@ -1,0 +1,7 @@
+[
+  {"id": "copper10_3lpm", "pipe": "copper_10x0.6", "length": 5, "flow": 3, "duration": 30, "T0": 20, "Tin": 55},
+  {"id": "copper12_1lpm", "pipe": "copper_12x0.6", "length": 5, "flow": 1, "duration": 80, "T0": 20, "Tin": 55},
+  {"id": "pex10_6lpm", "pipe": "pex_10x1.5", "length": 5, "flow": 6, "duration": 20, "T0": 20, "Tin": 55},
+  {"id": "pex12_2lpm_room", "pipe": "pex_12x2.0", "length": 8, "flow": 2, "duration": 90, "T0": 18, "Tin": 60, "airArea": "inf"},
+  {"id": "mlcp12_4lpm_bigair_loss", "pipe": "mlcp_12x1.6", "length": 15, "flow": 4, "duration": 90, "T0": 19, "Tin": 50, "airArea": 0.45, "airUA": 2.0, "Tenv": 15}
+]
