@@ -1,0 +1,48 @@
+{
+  "A_model": {
+    "n": 23,
+    "bias_s": -0.06,
+    "rmse_s": 3.27
+  },
+  "A_model_reading": {
+    "n": 23,
+    "bias_s": -0.22,
+    "rmse_s": 3.46
+  },
+  "A_paper_formula": {
+    "n": 23,
+    "bias_s": 3.12,
+    "rmse_s": 4.34
+  },
+  "B_model": {
+    "n": 23,
+    "bias_s": 1.09,
+    "rmse_s": 6.94
+  },
+  "B_model_reading": {
+    "n": 23,
+    "bias_s": 0.65,
+    "rmse_s": 6.68
+  },
+  "B_paper_formula": {
+    "n": 23,
+    "bias_s": 6.15,
+    "rmse_s": 8.94
+  },
+  "fig3_5m": {
+    "rmse_C": 1.3390067916080728,
+    "bias_C": -0.8315008191521135,
+    "max_abs_C": 4.883478170549822,
+    "model_time_to_45C_s": 17.527886674871553,
+    "measured_time_to_45C_s": 15.0,
+    "model_reading_to_45C_s": 20.0
+  },
+  "fig4_25m": {
+    "rmse_C": 0.518041365231868,
+    "bias_C": -0.2226590013426894,
+    "max_abs_C": 2.100000000000037,
+    "model_time_to_45C_s": 86.59161936105345,
+    "measured_time_to_45C_s": 85.0,
+    "model_reading_to_45C_s": 90.0
+  }
+}
